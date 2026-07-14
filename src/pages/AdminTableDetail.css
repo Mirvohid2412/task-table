@@ -188,6 +188,14 @@
     text-overflow: ellipsis;
 }
 
+.row-inputs-section {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    width: 100%;
+}
+
 .row-inputs-section .input {
     height: 38px;
     padding: 0 12px;
@@ -198,10 +206,16 @@
     gap: 8px;
     flex-shrink: 0;
     align-items: stretch;
+    flex-wrap: wrap;
 }
 
 .row-actions .btn {
     height: 38px;
+    min-width: 0;
+    max-width: 100%;
+    white-space: normal;
+    word-break: break-word;
+    line-height: 1.2;
 }
 
 .row-chevron {
@@ -340,6 +354,25 @@
 
 /* Mobile */
 @media (max-width: 1024px) {
+    .detail-page {
+        padding: 0 12px;
+    }
+
+    .rows-container {
+        width: 95% !important;
+        max-width: 95% !important;
+        margin: 0 auto;
+    }
+
+    .row-card,
+    .row-header,
+    .row-actions,
+    .row-inputs-section {
+        width: 100% !important;
+        max-width: 100% !important;
+        min-width: 0 !important;
+    }
+
     .table-detail-header {
         display: none;
     }
@@ -362,18 +395,33 @@
 
     .task-col,
     .task-col-actions,
-    .task-col-num {
+    .task-col-num,
+    .task-row > div,
+    .task-row > div > * {
         width: 100% !important;
-        min-width: 100% !important;
+        min-width: 0 !important;
     }
 
     .task-row .input,
-    .task-row .btn {
-        width: 100%;
+    .task-row .btn,
+    .row-inputs-section .input,
+    .row-inputs-section select {
+        width: 100% !important;
+        min-width: 0 !important;
     }
 }
 
 @media (max-width: 768px) {
+    .detail-page {
+        padding: 0 10px;
+    }
+
+    .rows-container {
+        width: 95%;
+        max-width: 95%;
+        margin: 0 auto;
+    }
+
     .row-header {
         flex-direction: column;
         align-items: stretch;
@@ -388,23 +436,36 @@
 
     .row-inputs-section {
         flex-direction: column;
-        min-width: 100% !important;
+        align-items: stretch;
+        min-width: 0 !important;
+        width: 100% !important;
     }
 
     .row-inputs-section .input,
     .row-inputs-section select {
         width: 100% !important;
+        min-width: 0 !important;
     }
 
     .row-actions {
         width: 100%;
         gap: 8px;
-        justify-content: space-between;
+        justify-content: flex-start;
+        flex-wrap: wrap;
     }
 
     .row-actions .btn {
-        flex: 1;
+        flex: 1 1 calc(50% - 4px);
+        min-width: 0;
         font-size: 12px;
+    }
+
+    .row-actions .btn:last-child {
+        margin-right: 0;
+    }
+
+    .row-chevron {
+        margin-left: auto;
     }
 
     .roles-bar {

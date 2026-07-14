@@ -130,14 +130,11 @@ const PublicTableView = () => {
                                     </span>
                                 </div>
                                 {row.role && (
-                                    <div style={{ padding: '6px 12px', background: 'var(--bg-input)', borderRadius: '6px', fontSize: '13px', color: 'var(--text-primary)' }}>
+                                    <div className="row-role-pill">
                                         Rol: <b>{row.role}</b>
                                     </div>
                                 )}
-                            </div>
-
-                            <div className="row-actions" style={{ justifyContent: 'flex-end', marginLeft: 'auto' }}>
-                                <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                                <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginLeft: 'auto' }}>
                                     <svg
                                         width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
                                         style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
