@@ -556,8 +556,8 @@ const AdminTableDetail = () => {
 
                                                 <div style={{ flex: 2, minWidth: '120px' }}>
                                                     <button
-                                                        className="btn btn-sm btn-secondary"
-                                                        style={{ width: '100%', wordBreak: 'break-all' }}
+                                                        className="btn btn-sm btn-primary"
+                                                        style={{ width: '100%', wordBreak: 'break-all', border: '1px solid rgba(108, 92, 231, 0.35)', fontWeight: 700 }}
                                                         onClick={() => openTaskModal(task, row._id)}
                                                     >
                                                         Vazifani ko'rish uchun bosing

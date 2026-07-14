@@ -146,7 +146,6 @@ const AdminTables = () => {
                     <div className="table-card card" key={table.tableId} style={{ animationDelay: `${index * 0.05}s` }}>
                         <div className="table-card-header">
                             <div className="table-info" style={{ width: '100%' }}>
-                                <span className="table-index">#{index + 1}</span>
                                 {editingTableId === table.tableId ? (
                                     <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, marginRight: '10px' }}>
                                         <input

@@ -116,12 +116,10 @@ body {
 .btn-primary {
   background: linear-gradient(135deg, var(--accent-primary), #5a4bd1);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(108, 92, 231, 0.3);
 }
 
 .btn-primary:hover {
   background: linear-gradient(135deg, var(--accent-primary-hover), #6b5be1);
-  box-shadow: 0 6px 20px rgba(108, 92, 231, 0.4);
   transform: translateY(-1px);
 }
 

@@ -125,7 +125,6 @@ const PublicTableView = () => {
                             <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                                     <span style={{ fontWeight: 600, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        <div className="row-num">{index + 1}</div>
                                         {row.name || 'Ism / Nomi (kiritilmagan)'}
                                     </span>
                                 </div>
