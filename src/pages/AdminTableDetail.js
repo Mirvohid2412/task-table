@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { tablesAPI, rolesAPI, rowsAPI, tasksAPI, authAPI } from '../services/api';
+import { tablesAPI, rolesAPI, authAPI } from '../services/api';
 import './AdminTableDetail.css';
 
 const AdminTableDetail = () => {

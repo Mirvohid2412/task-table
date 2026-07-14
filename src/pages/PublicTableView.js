@@ -47,7 +47,7 @@ const PublicTableView = () => {
             }
         };
         loadTable();
-    }, [tableId]);
+    }, [tableId, searchParams]);
 
     const toggleRow = (rowId) => {
         setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));

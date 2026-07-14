@@ -81,10 +81,6 @@ const AdminTables = () => {
         navigate(`/admin/tasks?id=${tableId}`);
     };
 
-    const handleOpenPublic = (tableId) => {
-        window.open(`/tasks?id=${tableId}`, '_blank');
-    };
-
     const handleLogout = () => {
         localStorage.removeItem('admin_token');
         navigate('/admin/auth', { replace: true });
