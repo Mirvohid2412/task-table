@@ -9,6 +9,8 @@ const AdminTables = () => {
     const [loading, setLoading] = useState(true);
     const [toasts, setToasts] = useState([]);
     const [confirmAction, setConfirmAction] = useState(null);
+    const [editingTableId, setEditingTableId] = useState(null);
+    const [editingTableName, setEditingTableName] = useState('');
 
     const addToast = useCallback((message, type = 'info') => {
         const id = Date.now();
@@ -71,6 +73,21 @@ const AdminTables = () => {
         }
     };
 
+    const handleSaveName = async (tableId) => {
+        if (!editingTableName.trim()) {
+            addToast('Jadval nomi bo\'sh bo\'lishi mumkin emas', 'error');
+            return;
+        }
+        try {
+            const res = await tablesAPI.updateName(tableId, editingTableName);
+            setTables(prev => prev.map(t => t.tableId === tableId ? { ...t, name: res.data.name } : t));
+            setEditingTableId(null);
+            addToast('Jadval nomi yangilandi', 'success');
+        } catch {
+            addToast('Jadval nomini yangilashda xatolik', 'error');
+        }
+    };
+
     const handleCopyUrl = (tableId) => {
         const url = `${window.location.origin}/tasks?id=${tableId}`;
         navigator.clipboard.writeText(url);
@@ -128,16 +145,49 @@ const AdminTables = () => {
                 {tables.map((table, index) => (
                     <div className="table-card card" key={table.tableId} style={{ animationDelay: `${index * 0.05}s` }}>
                         <div className="table-card-header">
-                            <div className="table-info">
+                            <div className="table-info" style={{ width: '100%' }}>
                                 <span className="table-index">#{index + 1}</span>
-                                <h3 className="table-name">{table.name}</h3>
+                                {editingTableId === table.tableId ? (
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', flex: 1, marginRight: '10px' }}>
+                                        <input
+                                            type="text"
+                                            className="input"
+                                            value={editingTableName}
+                                            onChange={(e) => setEditingTableName(e.target.value)}
+                                            style={{ margin: 0, padding: '6px 12px', fontSize: '15px' }}
+                                            autoFocus
+                                        />
+                                        <button className="btn btn-sm btn-success" onClick={() => handleSaveName(table.tableId)}>
+                                            Saqlash
+                                        </button>
+                                        <button className="btn btn-sm btn-secondary" onClick={() => setEditingTableId(null)}>
+                                            Bekor qilish
+                                        </button>
+                                    </div>
+                                ) : (
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                        <h3 className="table-name" style={{ margin: 0 }}>{table.name}</h3>
+                                        <button
+                                            className="btn btn-sm btn-secondary"
+                                            onClick={() => {
+                                                setEditingTableId(table.tableId);
+                                                setEditingTableName(table.name);
+                                            }}
+                                            title="Nomini o'zgartirish"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                <path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path>
+                                            </svg>
+                                            Nomini tahrirlash
+                                        </button>
+                                    </div>
+                                )}
                             </div>
-                            <span className="table-id">{table.tableId.substring(0, 8)}...</span>
                         </div>
 
-                        <div className="table-card-actions" style={{ flexWrap: 'wrap', alignItems: 'center' }}>
+                        <div className="table-card-actions" style={{ flexWrap: 'wrap', alignItems: 'center', marginTop: '16px' }}>
                             <div style={{ flex: 1, minWidth: '150px', fontSize: '13px', color: 'var(--text-secondary)', fontWeight: 500 }}>
-                                ID: <span style={{ color: 'var(--text-primary)', userSelect: 'all' }}>{table.tableId}</span>
+                                ID: <span style={{ color: 'var(--text-primary)', userSelect: 'all', marginRight: '6px' }}>{table.tableId}</span>
                             </div>
 
                             <button

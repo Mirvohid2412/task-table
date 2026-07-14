@@ -117,12 +117,23 @@
     text-align: right;
 }
 
-/* Rows */
+/* Tasks & Rows Layout */
 .rows-container {
     border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-radius: var(--radius-md);
     overflow: hidden;
+}
+
+.task-col {
+    overflow: hidden;
+}
+
+.mobile-label {
+    display: none;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 500;
 }
 
 .row-card {
@@ -344,6 +355,14 @@
     .task-row .input,
     .task-row .btn {
         width: 100%;
+    }
+
+    .tasks-header {
+        display: none !important;
+    }
+
+    .mobile-label {
+        display: block !important;
     }
 }
 

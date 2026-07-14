@@ -1,6 +1,6 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { tablesAPI, rolesAPI, authAPI } from '../services/api';
+import { tablesAPI, rolesAPI, authAPI, rowsAPI, tasksAPI } from '../services/api';
 import './AdminTableDetail.css';
 
 const AdminTableDetail = () => {
@@ -12,8 +12,9 @@ const AdminTableDetail = () => {
     const [loading, setLoading] = useState(true);
     const [expandedRows, setExpandedRows] = useState({});
     const [editingRowIds, setEditingRowIds] = useState({});
+    const [editingTaskIds, setEditingTaskIds] = useState({});
     const [toasts, setToasts] = useState([]);
-    const [isDirty, setIsDirty] = useState(false);
+    const isSaving = useRef(false);
 
     // Confirm Modal state
     const [confirmAction, setConfirmAction] = useState(null);
@@ -23,9 +24,23 @@ const AdminTableDetail = () => {
     const [modalTask, setModalTask] = useState(null);
     const [modalRowId, setModalRowId] = useState(null);
 
-    // New role input
     const [newRoleName, setNewRoleName] = useState('');
     const [showRoleInput, setShowRoleInput] = useState(false);
+
+    // Loader variables
+    const [creatingRow, setCreatingRow] = useState(false);
+    const [deletingRowIds, setDeletingRowIds] = useState({});
+    const [creatingTasks, setCreatingTasks] = useState({});
+    const [deletingTaskIds, setDeletingTaskIds] = useState({});
+
+    const SpinnerIcon = () => (
+        <svg className="loading-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="4 4 20 4"></polyline>
+            <path d="M4 10a8 8 0 0 0 16 0"></path>
+            <circle cx="12" cy="12" r="10" strokeOpacity="0.25"></circle>
+            <path d="M12 2a10 10 0 0 1 10 10"></path>
+        </svg>
+    );
 
     // Active role filter (Sync with URL)
     const activeRoleFilter = searchParams.get('role') || 'all';
@@ -50,7 +65,6 @@ const AdminTableDetail = () => {
         try {
             const res = await tablesAPI.getById(tableId);
             setTable(res.data);
-            setIsDirty(false);
         } catch {
             addToast('Jadval yuklanmadi', 'error');
         } finally {
@@ -112,44 +126,63 @@ const AdminTableDetail = () => {
         }
     };
 
+    // Masking function for "DD.MM.YYYY HH:MM"
+    const formatDateTimeInput = (value) => {
+        let v = value.replace(/\D/g, ''); // remove non-digits
+        if (v.length > 12) v = v.substring(0, 12);
+
+        let res = '';
+        if (v.length > 0) res += v.substring(0, 2);
+        if (v.length > 2) res += '.' + v.substring(2, 4);
+        if (v.length > 4) res += '.' + v.substring(4, 8);
+        if (v.length > 8) res += ' ' + v.substring(8, 10);
+        if (v.length > 10) res += ':' + v.substring(10, 12);
+
+        return res;
+    };
+
     // ===============================================
     // LOCAL STATE CHANGES (will trigger isDirty = true)
     // ===============================================
 
-    // Add Row locally
-    const handleCreateRowLocal = () => {
-        const defaultRole = activeRoleFilter !== 'all' ? activeRoleFilter : '';
-
-        setTable(prev => ({
-            ...prev,
-            rows: [...prev.rows, {
-                _id: 'temp_' + Date.now().toString() + Math.random(),
+    // Add Row via API
+    const handleCreateRowLocal = async () => {
+        if (isSaving.current || creatingRow) return;
+        isSaving.current = true;
+        setCreatingRow(true);
+        try {
+            const defaultRole = activeRoleFilter !== 'all' ? activeRoleFilter : '';
+            await rowsAPI.create(tableId, {
                 name: '',
                 role: defaultRole,
-                tasks: [{
-                    _id: 'temp_task_' + Date.now().toString() + Math.random(),
-                    name: "",
-                    description: '',
-                    startDate: '',
-                    endDate: '',
-                    delay: '',
-                }]
-            }]
-        }));
-        setIsDirty(true);
+                tasks: [{ name: '', description: '', startDate: '', endDate: '', delay: '' }]
+            });
+            await fetchTable();
+            addToast('Yangi qator yaratildi', 'success');
+        } catch {
+            addToast('Qator yaratishda xatolik', 'error');
+        } finally {
+            isSaving.current = false;
+            setCreatingRow(false);
+        }
     };
 
-    // Remove Row locally
+    // Remove Row via API
     const handleDeleteRowLocal = (rowId) => {
         setConfirmAction({
             message: "Rostdan ham bu qatorni o'chirasizmi?",
-            onConfirm: () => {
-                setTable(prev => ({
-                    ...prev,
-                    rows: prev.rows.filter(r => r._id !== rowId)
-                }));
-                setIsDirty(true);
+            onConfirm: async () => {
                 setConfirmAction(null);
+                setDeletingRowIds(prev => ({ ...prev, [rowId]: true }));
+                try {
+                    await rowsAPI.delete(tableId, rowId);
+                    setTable(prev => ({ ...prev, rows: prev.rows.filter(r => r._id !== rowId) }));
+                    addToast("Qator o'chirildi", 'success');
+                } catch {
+                    addToast('Xatolik', 'error');
+                } finally {
+                    setDeletingRowIds(prev => ({ ...prev, [rowId]: false }));
+                }
             }
         });
     };
@@ -160,52 +193,55 @@ const AdminTableDetail = () => {
             ...prev,
             rows: prev.rows.map(r => r._id === rowId ? { ...r, [field]: value } : r)
         }));
-        setIsDirty(true);
     };
 
-    // Add Task locally
-    const handleAddTaskLocal = (rowId) => {
-        setTable(prev => ({
-            ...prev,
-            rows: prev.rows.map(row => {
-                if (row._id === rowId) {
-                    return {
-                        ...row,
-                        tasks: [...row.tasks, {
-                            _id: 'temp_task_' + Date.now().toString() + Math.random(),
-                            name: "",
-                            description: '',
-                            startDate: '',
-                            endDate: '',
-                            delay: '',
-                        }]
-                    };
-                }
-                return row;
-            })
-        }));
-        setIsDirty(true);
+    const handleRowRoleSelect = (rowId, value) => {
+        const newRows = table.rows.map(r => r._id === rowId ? { ...r, role: value } : r);
+        setTable(prev => ({ ...prev, rows: newRows }));
+        handleGlobalSave(newRows);
     };
 
-    // Remove Task locally
+    // Add Task via API
+    const handleAddTaskLocal = async (rowId) => {
+        if (isSaving.current || creatingTasks[rowId]) return;
+        isSaving.current = true;
+        setCreatingTasks(prev => ({ ...prev, [rowId]: true }));
+        try {
+            await tasksAPI.add(tableId, rowId);
+            await fetchTable();
+            addToast('Vazifa qo\'shildi', 'success');
+        } catch {
+            addToast('Xatolik', 'error');
+        } finally {
+            isSaving.current = false;
+            setCreatingTasks(prev => ({ ...prev, [rowId]: false }));
+        }
+    };
+
+    // Remove Task via API
     const handleDeleteTaskLocal = (rowId, taskId) => {
         setConfirmAction({
             message: "Vazifani o'chirasizmi?",
-            onConfirm: () => {
-                setTable(prev => ({
-                    ...prev,
-                    rows: prev.rows.map(row => {
-                        if (row._id === rowId) {
-                            return {
-                                ...row,
-                                tasks: row.tasks.filter(t => t._id !== taskId)
-                            };
-                        }
-                        return row;
-                    })
-                }));
-                setIsDirty(true);
+            onConfirm: async () => {
                 setConfirmAction(null);
+                setDeletingTaskIds(prev => ({ ...prev, [taskId]: true }));
+                try {
+                    await tasksAPI.delete(tableId, rowId, taskId);
+                    setTable(prev => ({
+                        ...prev,
+                        rows: prev.rows.map(row => {
+                            if (row._id === rowId) {
+                                return { ...row, tasks: row.tasks.filter(t => t._id !== taskId) };
+                            }
+                            return row;
+                        })
+                    }));
+                    addToast("Vazifa o'chirildi", 'success');
+                } catch {
+                    addToast('Xatolik', 'error');
+                } finally {
+                    setDeletingTaskIds(prev => ({ ...prev, [taskId]: false }));
+                }
             }
         });
     };
@@ -224,7 +260,6 @@ const AdminTableDetail = () => {
                 return row;
             })
         }));
-        setIsDirty(true);
     };
 
     const toggleRow = (rowId) => {
@@ -238,19 +273,15 @@ const AdminTableDetail = () => {
         setModalOpen(true);
     };
 
-    const handleModalClose = () => {
-        // Save modal state to local state
-        handleTaskUpdateLocal(modalRowId, modalTask._id, 'name', modalTask.name);
-        handleTaskUpdateLocal(modalRowId, modalTask._id, 'description', modalTask.description);
-        setModalOpen(false);
-    };
-
-    // GLOBAL SAVE / CANCEL
-    const handleGlobalSave = async () => {
+    // GLOBAL SAVE helper
+    const handleGlobalSave = async (rowsOverride = null) => {
+        if (isSaving.current) return;
+        isSaving.current = true;
         try {
-            // Because we create IDs with `temp_`, MongoDB will fail if we pass them.
-            // Let's clean up temp IDs so Mongoose will auto-generate real ObjectIds for new subdocs.
-            const rowsToSave = table.rows.map(row => {
+            const currentRows = rowsOverride || table.rows;
+            const oldIds = currentRows.map(r => r._id);
+
+            const rowsToSave = currentRows.map(row => {
                 const newRow = { ...row };
                 if (newRow._id && newRow._id.startsWith('temp_')) delete newRow._id;
                 newRow.tasks = newRow.tasks.map(task => {
@@ -262,25 +293,50 @@ const AdminTableDetail = () => {
             });
 
             const res = await tablesAPI.updateData(tableId, rowsToSave);
+
+            // Map old expandedRows to new IDs by index
+            const newRows = res.data.rows || [];
+            setExpandedRows(prev => {
+                const mapped = {};
+                oldIds.forEach((oldId, i) => {
+                    if (prev[oldId] !== undefined && newRows[i]) {
+                        mapped[newRows[i]._id] = prev[oldId];
+                    }
+                });
+                // Keep any existing real IDs that didn't change
+                newRows.forEach(r => {
+                    if (prev[r._id] !== undefined && mapped[r._id] === undefined) {
+                        mapped[r._id] = prev[r._id];
+                    }
+                });
+                return mapped;
+            });
+
             setTable(res.data);
-            setIsDirty(false);
-            addToast("Barcha o'zgarishlar saqlandi", 'success');
+            addToast("Muvaffaqiyatli saqlandi", 'success');
         } catch {
             addToast('Saqlashda xatolik', 'error');
+        } finally {
+            isSaving.current = false;
         }
     };
 
-    const handleGlobalCancel = () => {
-        setConfirmAction({
-            message: "Kiritilgan o'zgarishlar bekor qilinadi, rozimisiz?",
-            onConfirm: () => {
-                fetchTable(); // refetches and resets table state
-                setIsDirty(false);
-                addToast("O'zgarishlar bekor qilindi", 'info');
-                setConfirmAction(null);
+    const handleModalClose = () => {
+        setModalOpen(false);
+        const newRows = table.rows.map(row => {
+            if (row._id === modalRowId) {
+                return {
+                    ...row,
+                    tasks: row.tasks.map(t => t._id === modalTask._id ? { ...t, name: modalTask.name, description: modalTask.description } : t)
+                };
             }
+            return row;
         });
+        setTable(prev => ({ ...prev, rows: newRows }));
+        handleGlobalSave(newRows);
     };
+
+
 
     // Filtered rows
     const filteredRows = table?.rows?.filter(row => {
@@ -393,7 +449,7 @@ const AdminTableDetail = () => {
                 {filteredRows.map((row, index) => (
                     <div key={row._id} className="row-card" style={{ animationDelay: `${index * 0.03}s` }}>
                         {/* Editable row header */}
-                        <div className="row-header" onClick={(e) => { if (e.target.closest('.row-actions') || e.target.closest('.row-inputs-section input') || e.target.closest('.row-inputs-section select')) return; toggleRow(row._id); }} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
+                        <div className="row-header" onClick={(e) => { if (e.target.closest('.row-actions') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.closest('button')) return; toggleRow(row._id); }} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
 
                             <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
                                 {editingRowIds[row._id] ? (
@@ -408,8 +464,21 @@ const AdminTableDetail = () => {
                                             onKeyDown={(e) => e.key === 'Enter' && setEditingRowIds(prev => ({ ...prev, [row._id]: false }))}
                                         />
                                         <button
+                                            className="btn btn-sm btn-secondary"
+                                            onClick={() => {
+                                                setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
+                                                fetchTable();
+                                            }}
+                                            title="Bekor qilish"
+                                        >
+                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                        </button>
+                                        <button
                                             className="btn btn-sm btn-success"
-                                            onClick={() => setEditingRowIds(prev => ({ ...prev, [row._id]: false }))}
+                                            onClick={() => {
+                                                setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
+                                                handleGlobalSave();
+                                            }}
                                             title="Tahrirni saqlash"
                                         >
                                             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -428,7 +497,7 @@ const AdminTableDetail = () => {
                                         className="input"
                                         style={{ width: 'auto', minWidth: '150px' }}
                                         value={row.role || ''}
-                                        onChange={(e) => handleRowUpdateLocal(row._id, 'role', e.target.value)}
+                                        onChange={(e) => handleRowRoleSelect(row._id, e.target.value)}
                                         onClick={(e) => e.stopPropagation()}
                                     >
                                         <option value="">Rol tanlang...</option>
@@ -444,19 +513,21 @@ const AdminTableDetail = () => {
                                         Tahrirlash
                                     </button>
                                 )}
-                                <button className="btn btn-sm btn-primary" onClick={() => handleAddTaskLocal(row._id)}>
-                                    Vazifa qo'shish
+                                <button className="btn btn-sm btn-primary" onClick={() => handleAddTaskLocal(row._id)} disabled={creatingTasks[row._id]}>
+                                    {creatingTasks[row._id] ? <SpinnerIcon /> : "Vazifa qo'shish"}
                                 </button>
-                                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteRowLocal(row._id)} title="O'chirish">
-                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                        <polyline points="3 6 5 6 21 6" />
-                                        <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                    </svg>
+                                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteRowLocal(row._id)} disabled={deletingRowIds[row._id]} title="O'chirish">
+                                    {deletingRowIds[row._id] ? <SpinnerIcon /> : (
+                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                            <polyline points="3 6 5 6 21 6" />
+                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                        </svg>
+                                    )}
                                 </button>
                                 <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px' }}>
                                     <svg
                                         width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                        style={{ transform: expandedRows[row._id] === false ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
+                                        style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
                                     >
                                         <polyline points="6 9 12 15 18 9" />
                                     </svg>
@@ -465,77 +536,112 @@ const AdminTableDetail = () => {
                         </div>
 
                         {/* Expanded Tasks */}
-                        {expandedRows[row._id] !== false && (
+                        {expandedRows[row._id] === true && (
                             <div className="row-tasks">
-                                {row.tasks?.length === 0 ? (
+                                {!row.tasks?.length ? (
                                     <div className="no-tasks">Vazifalar yo'q</div>
                                 ) : (
                                     <div className="tasks-table">
-                                        <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '0 12px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>
-                                            <div className="task-col-num" style={{ width: '36px' }}>#</div>
-                                            <div className="task-col" style={{ flex: 2, minWidth: '200px' }}>Vazifa</div>
-                                            <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>Boshlanish</div>
-                                            <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>Tugash</div>
-                                            <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>Istisno kechiktirish</div>
-                                            <div className="task-col task-col-actions" style={{ width: '150px' }}></div>
+                                        <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, alignItems: 'center' }}>
+                                            <div style={{ width: '36px', flexShrink: 0 }}>#</div>
+                                            <div style={{ flex: 2, minWidth: '120px' }}>Vazifa</div>
+                                            <div style={{ flex: 1, minWidth: '100px' }}>Boshlanish</div>
+                                            <div style={{ flex: 1, minWidth: '100px' }}>Tugash</div>
+                                            <div style={{ flex: 1, minWidth: '100px' }}>Istisno kechiktirish</div>
+                                            <div style={{ width: '180px', flexShrink: 0 }}></div>
                                         </div>
-                                        {row.tasks.map((task, tIndex) => (
-                                            <div key={task._id} className="task-row">
-                                                <div className="task-col task-col-num">{tIndex + 1}</div>
+                                        {(row.tasks || []).map((task, tIndex) => (
+                                            <div key={task._id} className="task-row" style={{ display: 'flex', gap: '8px', padding: '8px 12px', alignItems: 'center' }}>
+                                                <div style={{ width: '36px', flexShrink: 0, fontWeight: 600, color: 'var(--accent-primary)' }}>{tIndex + 1}</div>
 
-                                                <div className="task-col" style={{ flex: 2, minWidth: '200px' }}>
+                                                <div style={{ flex: 2, minWidth: '120px' }}>
                                                     <button
                                                         className="btn btn-sm btn-secondary"
                                                         style={{ width: '100%', wordBreak: 'break-all' }}
                                                         onClick={() => openTaskModal(task, row._id)}
                                                     >
-                                                        {task.name || "Vazifani tahrirlash uchun bosing"}
+                                                        Vazifani ko'rish uchun bosing
                                                     </button>
                                                 </div>
 
-                                                <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>
+                                                <div style={{ flex: 1, minWidth: '100px' }}>
+                                                    <label className="mobile-label">Boshlanish</label>
                                                     <input
                                                         type="text"
                                                         className="input"
                                                         placeholder="00.00.0000 00:00"
                                                         value={task.startDate}
-                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'startDate', e.target.value)}
+                                                        disabled={!editingTaskIds[task._id]}
+                                                        style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
+                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'startDate', formatDateTimeInput(e.target.value))}
                                                     />
                                                 </div>
 
-                                                <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>
+                                                <div style={{ flex: 1, minWidth: '100px' }}>
+                                                    <label className="mobile-label">Tugash</label>
                                                     <input
                                                         type="text"
                                                         className="input"
                                                         placeholder="00.00.0000 00:00"
                                                         value={task.endDate}
-                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'endDate', e.target.value)}
+                                                        disabled={!editingTaskIds[task._id]}
+                                                        style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
+                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'endDate', formatDateTimeInput(e.target.value))}
                                                     />
                                                 </div>
 
-                                                <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>
+                                                <div style={{ flex: 1, minWidth: '100px' }}>
+                                                    <label className="mobile-label">Istisno kechiktirish</label>
                                                     <input
                                                         type="text"
                                                         className="input"
                                                         placeholder="00.00.0000 00:00"
                                                         value={task.delay}
-                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'delay', e.target.value)}
+                                                        disabled={!editingTaskIds[task._id]}
+                                                        style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
+                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'delay', formatDateTimeInput(e.target.value))}
                                                     />
                                                 </div>
 
-                                                <div className="task-col task-col-actions" style={{ width: 'auto' }}>
-                                                    <button
-                                                        className="btn btn-sm btn-danger"
-                                                        onClick={() => handleDeleteTaskLocal(row._id, task._id)}
-                                                    >
-                                                        O'chirish
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-secondary"
-                                                        onClick={() => openTaskModal(task, row._id)}
-                                                    >
-                                                        Tahrirlash
-                                                    </button>
+                                                <div style={{ width: '180px', flexShrink: 0, display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                                    {editingTaskIds[task._id] ? (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-secondary"
+                                                                onClick={() => {
+                                                                    setEditingTaskIds(prev => ({ ...prev, [task._id]: false }));
+                                                                    fetchTable(); // Reset un-saved changes
+                                                                }}
+                                                            >
+                                                                Bekor qilish
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-success"
+                                                                onClick={() => {
+                                                                    setEditingTaskIds(prev => ({ ...prev, [task._id]: false }));
+                                                                    handleGlobalSave();
+                                                                }}
+                                                            >
+                                                                Saqlash
+                                                            </button>
+                                                        </>
+                                                    ) : (
+                                                        <>
+                                                            <button
+                                                                className="btn btn-sm btn-danger"
+                                                                onClick={() => handleDeleteTaskLocal(row._id, task._id)}
+                                                                disabled={deletingTaskIds[task._id]}
+                                                            >
+                                                                {deletingTaskIds[task._id] ? <SpinnerIcon /> : "O'chirish"}
+                                                            </button>
+                                                            <button
+                                                                className="btn btn-sm btn-secondary"
+                                                                onClick={() => setEditingTaskIds(prev => ({ ...prev, [task._id]: true }))}
+                                                            >
+                                                                Tahrirlash
+                                                            </button>
+                                                        </>
+                                                    )}
                                                 </div>
                                             </div>
                                         ))}
@@ -563,17 +669,12 @@ const AdminTableDetail = () => {
                 </div>
             )}
 
-            {/* Global Actions (Create Row, Cancel, Save) */}
+            {/* Global Actions (Create Row) */}
             <div className="global-actions" style={{ display: 'flex', justifyContent: 'space-between', padding: '16px', background: 'var(--card-bg)', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '20px' }}>
-                <button className="btn btn-secondary create-table-btn" onClick={handleCreateRowLocal}>
-                    Yangi qator yaratish
+                <button className="btn btn-secondary create-table-btn" onClick={handleCreateRowLocal} disabled={creatingRow} style={{ minWidth: '180px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                    {creatingRow && <SpinnerIcon />}
+                    {creatingRow ? "Yaratilmoqda..." : "Yangi qator yaratish"}
                 </button>
-                {isDirty && (
-                    <div className="global-save-actions" style={{ display: 'flex', gap: '10px' }}>
-                        <button className="btn btn-secondary" onClick={handleGlobalCancel}>Bekor qilish</button>
-                        <button className="btn btn-primary" onClick={handleGlobalSave}>Saqlash</button>
-                    </div>
-                )}
             </div>
 
             {/* Task View/Edit Modal (Only Name & Desc, NO API CALL) */}
@@ -606,7 +707,7 @@ const AdminTableDetail = () => {
                             </div>
                         </div>
                         <div className="modal-footer">
-                            <button className="btn btn-primary" onClick={handleModalClose}>Yopish</button>
+                            <button className="btn btn-success" onClick={handleModalClose}>Saqlash</button>
                         </div>
                     </div>
                 </div>

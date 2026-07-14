@@ -121,13 +121,10 @@ const PublicTableView = () => {
                 {filteredRows.map((row, index) => (
                     <div key={row._id} className="row-card" style={{ animationDelay: `${index * 0.03}s` }}>
 
-                        <div className="row-header" style={{ flexWrap: 'wrap', gap: '10px' }}>
+                        <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
                             <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
-                                    <span
-                                        onClick={() => toggleRow(row._id)}
-                                        style={{ cursor: 'pointer', fontWeight: 600, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}
-                                    >
+                                    <span style={{ fontWeight: 600, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
                                         <div className="row-num">{index + 1}</div>
                                         {row.name || 'Ism / Nomi (kiritilmagan)'}
                                     </span>
@@ -140,10 +137,10 @@ const PublicTableView = () => {
                             </div>
 
                             <div className="row-actions" style={{ justifyContent: 'flex-end', marginLeft: 'auto' }}>
-                                <div className="row-chevron" onClick={() => toggleRow(row._id)} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                                <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px' }}>
                                     <svg
                                         width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                        style={{ transform: expandedRows[row._id] === false ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
+                                        style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
                                     >
                                         <polyline points="6 9 12 15 18 9" />
                                     </svg>
@@ -152,46 +149,48 @@ const PublicTableView = () => {
                         </div>
 
                         {/* Expanded Tasks */}
-                        {expandedRows[row._id] !== false && (
+                        {expandedRows[row._id] === true && (
                             <div className="row-tasks">
                                 {row.tasks?.length === 0 ? (
                                     <div className="no-tasks">Vazifalar yo'q</div>
                                 ) : (
                                     <div className="tasks-table">
-                                        <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '0 12px 8px', borderBottom: '1px solid var(--border-color)', marginBottom: '8px', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600 }}>
-                                            <div className="task-col-num" style={{ width: '36px' }}>#</div>
-                                            <div className="task-col" style={{ flex: 2, minWidth: '200px' }}>Vazifa</div>
-                                            <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>Boshlanish</div>
-                                            <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>Tugash</div>
-                                            <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>Istisno kechiktirish</div>
+                                        <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, alignItems: 'center' }}>
+                                            <div style={{ width: '36px', flexShrink: 0 }}>#</div>
+                                            <div style={{ flex: 2, minWidth: '120px' }}>Vazifa</div>
+                                            <div style={{ flex: 1, minWidth: '100px' }}>Boshlanish</div>
+                                            <div style={{ flex: 1, minWidth: '100px' }}>Tugash</div>
+                                            <div style={{ flex: 1, minWidth: '100px' }}>Istisno kechiktirish</div>
                                         </div>
                                         {row.tasks.map((task, tIndex) => (
-                                            <div key={task._id} className="task-row">
-                                                <div className="task-col task-col-num">{tIndex + 1}</div>
+                                            <div key={task._id} className="task-row" onClick={() => openTaskModal(task)} style={{ cursor: 'pointer', display: 'flex', gap: '8px', padding: '8px 12px', alignItems: 'center' }}>
+                                                <div style={{ width: '36px', flexShrink: 0, fontWeight: 600, color: 'var(--accent-primary)' }}>{tIndex + 1}</div>
 
-                                                <div className="task-col" style={{ flex: 2, minWidth: '200px' }}>
+                                                <div style={{ flex: 2, minWidth: '120px' }}>
                                                     <button
                                                         className="btn btn-sm btn-secondary"
-                                                        style={{ width: '100%', wordBreak: 'break-all', textAlign: 'left' }}
-                                                        onClick={() => openTaskModal(task)}
+                                                        style={{ width: '100%', wordBreak: 'break-all', textAlign: 'left', pointerEvents: 'none' }}
                                                     >
-                                                        {task.name || "Vazifani tahrirlash uchun bosing"}
+                                                        Vazifani ko'rish uchun bosing
                                                     </button>
                                                 </div>
 
-                                                <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>
-                                                    <div className="input" style={{ display: 'flex', alignItems: 'center', color: task.startDate ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                                        {task.startDate || 'Boshlash vaqti yo\'q'}
+                                                <div style={{ flex: 1, minWidth: '100px' }}>
+                                                    <label className="mobile-label">Boshlanish</label>
+                                                    <div className="input" style={{ display: 'flex', alignItems: 'center' }}>
+                                                        {task.startDate || '-'}
                                                     </div>
                                                 </div>
 
-                                                <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>
-                                                    <div className="input" style={{ display: 'flex', alignItems: 'center', color: task.endDate ? 'var(--text-primary)' : 'var(--text-muted)' }}>
-                                                        {task.endDate || 'Tugash vaqti yo\'q'}
+                                                <div style={{ flex: 1, minWidth: '100px' }}>
+                                                    <label className="mobile-label">Tugash</label>
+                                                    <div className="input" style={{ display: 'flex', alignItems: 'center' }}>
+                                                        {task.endDate || '-'}
                                                     </div>
                                                 </div>
 
-                                                <div className="task-col" style={{ flex: 1, minWidth: '120px' }}>
+                                                <div style={{ flex: 1, minWidth: '100px' }}>
+                                                    <label className="mobile-label">Istisno kechiktirish</label>
                                                     <div className="input" style={{ display: 'flex', alignItems: 'center', color: task.delay ? 'var(--accent-warning)' : 'var(--text-muted)' }}>
                                                         {task.delay || 'Kechiktirish yo\'q'}
                                                     </div>

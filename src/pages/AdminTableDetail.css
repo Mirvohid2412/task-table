@@ -4,6 +4,17 @@
     max-width: 1400px;
 }
 
+@keyframes spin {
+    100% {
+        transform: rotate(360deg);
+    }
+}
+
+.loading-spin {
+    animation: spin 1s linear infinite;
+    flex-shrink: 0;
+}
+
 .detail-header {
     display: flex;
     align-items: center;
@@ -120,8 +131,7 @@
 /* Rows */
 .rows-container {
     border: 1px solid var(--border-color);
-    border-top: none;
-    border-radius: 0 0 var(--radius-md) var(--radius-md);
+    border-radius: var(--radius-md);
     overflow: hidden;
 }
 
@@ -228,6 +238,14 @@
     font-weight: 600;
 }
 
+.mobile-label {
+    display: none;
+    font-size: 13px;
+    color: var(--text-muted);
+    margin-bottom: 6px;
+    font-weight: 500;
+}
+
 .task-row .input {
     height: 38px;
     padding: 0 12px;
@@ -332,6 +350,14 @@
         padding: 12px;
         border: 1px solid var(--border-color);
         gap: 8px;
+    }
+
+    .tasks-header {
+        display: none !important;
+    }
+
+    .mobile-label {
+        display: block !important;
     }
 
     .task-col,
