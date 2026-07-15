@@ -639,8 +639,8 @@ const AdminTableDetail = () => {
                                         <button className="btn btn-sm btn-primary" onClick={() => handleAddTaskLocal(row._id)} disabled={creatingTasks[row._id]}>
                                             {creatingTasks[row._id] ? <SpinnerIcon /> : "Vazifa qo'shish"}
                                         </button>
-                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteRowLocal(row._id)} disabled={deletingTaskIds[row._id]} title="O'chirish">
-                                            {deletingTaskIds[row._id] ? <SpinnerIcon /> : (
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteRowLocal(row._id)} disabled={deletingRowIds[row._id]} title="O'chirish">
+                                            {deletingRowIds[row._id] ? <SpinnerIcon /> : (
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                                                     <polyline points="3 6 5 6 21 6" />
                                                     <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
