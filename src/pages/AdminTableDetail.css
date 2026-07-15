@@ -223,14 +223,16 @@
 .role-group-title {
     display: inline-flex;
     align-items: center;
-    padding: 6px 10px;
-    border-radius: 999px;
+    padding: 5px 8px;
+    border-radius: 7px;
     background: var(--bg-input);
     color: var(--accent-primary);
     font-size: 12px;
-    font-weight: 700;
-    text-transform: uppercase;
-    letter-spacing: 0.4px;
+    font-weight: 600;
+    text-transform: none;
+    letter-spacing: 0.2px;
+    line-height: 1.2;
+    margin-bottom: 10px;
 }
 
 .row-card {
@@ -297,6 +299,15 @@
 .row-inputs-section .input {
     height: 38px;
     padding: 0 12px;
+}
+
+.compact-select {
+    width: 100% !important;
+    max-width: 140px !important;
+    min-width: 0 !important;
+    flex: 0 0 auto !important;
+    padding: 0 10px !important;
+    font-size: 13px !important;
 }
 
 .row-actions {

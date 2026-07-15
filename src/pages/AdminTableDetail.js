@@ -616,8 +616,8 @@ const AdminTableDetail = () => {
 
                                             {table.roles && table.roles.length > 0 && (
                                                 <select
-                                                    className="input"
-                                                    style={{ width: 'auto', minWidth: '150px' }}
+                                                    className="input compact-select"
+                                                    style={{ width: 'auto', minWidth: '0' }}
                                                     value={row.role || ''}
                                                     onChange={(e) => handleRowRoleSelect(row._id, e.target.value)}
                                                     onClick={(e) => e.stopPropagation()}
