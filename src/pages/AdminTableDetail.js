@@ -14,7 +14,6 @@ const AdminTableDetail = () => {
     const [editingRowIds, setEditingRowIds] = useState({});
     const [rowNameDrafts, setRowNameDrafts] = useState({});
     const [editingTaskIds, setEditingTaskIds] = useState({});
-    const [editingTelegramLinkRowId, setEditingTelegramLinkRowId] = useState(null);
     const [telegramLinkDrafts, setTelegramLinkDrafts] = useState({});
     const [toasts, setToasts] = useState([]);
     const isSaving = useRef(false);
@@ -326,13 +325,11 @@ const AdminTableDetail = () => {
         const rowKey = row?._id || row?.id;
         setEditingRowIds(prev => ({ ...prev, [rowKey]: true }));
         setRowNameDrafts(prev => ({ ...prev, [rowKey]: row.name || '' }));
-        setEditingTelegramLinkRowId(rowKey);
         setTelegramLinkDrafts(prev => ({ ...prev, [rowKey]: row?.telegramLink || '' }));
     };
 
     const cancelEditingRowName = (rowId) => {
         setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
-        setEditingTelegramLinkRowId(null);
         setRowNameDrafts(prev => {
             const next = { ...prev };
             delete next[rowId];
@@ -349,7 +346,6 @@ const AdminTableDetail = () => {
         const row = table?.rows?.find(r => r._id === rowId);
         if (!row) {
             setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
-            setEditingTelegramLinkRowId(null);
             return;
         }
 
@@ -365,7 +361,6 @@ const AdminTableDetail = () => {
         const nextRows = table.rows.map(r => r._id === rowId ? { ...r, name: nextName, telegramLink: normalizedTelegramLink } : r);
         setTable(prev => ({ ...prev, rows: nextRows }));
         setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
-        setEditingTelegramLinkRowId(null);
         handleGlobalSave(nextRows);
     };
 
@@ -410,14 +405,6 @@ const AdminTableDetail = () => {
                 }
             }
         });
-    };
-
-    // Edit Row Name/Role locally
-    const handleRowUpdateLocal = (rowId, field, value) => {
-        setTable(prev => ({
-            ...prev,
-            rows: prev.rows.map(r => r._id === rowId ? { ...r, [field]: value } : r)
-        }));
     };
 
     const handleRowRoleSelect = (rowId, value) => {
