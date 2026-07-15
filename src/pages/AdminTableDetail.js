@@ -18,6 +18,7 @@ const AdminTableDetail = () => {
     const [telegramLinkDrafts, setTelegramLinkDrafts] = useState({});
     const [toasts, setToasts] = useState([]);
     const isSaving = useRef(false);
+    const descriptionTextareaRef = useRef(null);
 
     // Confirm Modal state
     const [confirmAction, setConfirmAction] = useState(null);
@@ -66,6 +67,30 @@ const AdminTableDetail = () => {
         setToasts(prev => [...prev, { id, message, type }]);
         setTimeout(() => setToasts(prev => prev.filter(t => t.id !== id)), 3000);
     }, []);
+
+    const adjustModalDescriptionHeight = useCallback(() => {
+        const textarea = descriptionTextareaRef.current;
+        if (!textarea) return;
+
+        // Find the scrollable container (.modal-body) and preserve its scroll position
+        const modalBody = textarea.closest('.modal-body');
+        const prevScrollTop = modalBody ? modalBody.scrollTop : 0;
+
+        textarea.style.height = 'auto';
+        textarea.style.height = `${textarea.scrollHeight}px`;
+
+        if (modalBody) {
+            modalBody.scrollTop = prevScrollTop;
+        }
+    }, []);
+
+    useEffect(() => {
+        if (modalOpen && isEditingModalDesc) {
+            // Wait for text to be rendered
+            const timer = setTimeout(adjustModalDescriptionHeight, 50);
+            return () => clearTimeout(timer);
+        }
+    }, [modalOpen, isEditingModalDesc, adjustModalDescriptionHeight]);
 
     const fetchTable = useCallback(async () => {
         setLoading(true);
@@ -225,7 +250,7 @@ const AdminTableDetail = () => {
             .replace(/'/g, '&#39;');
 
         // 1. Hyperlink [text](URL)
-        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: underline;">$1</a>');
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: none;">$1</a>');
         // 2. Bold *text*
         escaped = escaped.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
         // 3. Underline __text__
@@ -293,56 +318,55 @@ const AdminTableDetail = () => {
         }
     };
 
-    const startEditingTelegramLink = (row) => {
-        const rowKey = row?._id || row?.id;
-        setEditingTelegramLinkRowId(rowKey);
-        setTelegramLinkDrafts(prev => ({ ...prev, [rowKey]: row?.telegramLink || '' }));
-    };
-
-    const cancelEditingTelegramLink = () => {
-        setEditingTelegramLinkRowId(null);
-    };
-
-    const saveTelegramLink = async (row) => {
-        const rowKey = row?._id || row?.id;
-        const nextValue = telegramLinkDrafts[rowKey] ?? row?.telegramLink ?? '';
-        const normalizedValue = typeof nextValue === 'string' ? nextValue.trim() : '';
-        if (!validateTelegramLinkValue(normalizedValue)) return;
-
-        try {
-            const res = await rowsAPI.update(tableId, rowKey, { telegramLink: normalizedValue });
-            if (res.data) setTable(res.data);
-            setTelegramLinkDrafts(prev => ({ ...prev, [rowKey]: normalizedValue }));
-            setEditingTelegramLinkRowId(null);
-            addToast('Telegram link saqlandi', 'success');
-        } catch (error) {
-            const message = error?.response?.data?.message || 'Telegram link saqlanmadi';
-            addToast(message, 'error');
-        }
-    };
-
     // ===============================================
     // LOCAL STATE CHANGES (will trigger isDirty = true)
     // ===============================================
 
     const startEditingRowName = (row) => {
-        setEditingRowIds(prev => ({ ...prev, [row._id]: true }));
-        setRowNameDrafts(prev => ({ ...prev, [row._id]: row.name || '' }));
+        const rowKey = row?._id || row?.id;
+        setEditingRowIds(prev => ({ ...prev, [rowKey]: true }));
+        setRowNameDrafts(prev => ({ ...prev, [rowKey]: row.name || '' }));
+        setEditingTelegramLinkRowId(rowKey);
+        setTelegramLinkDrafts(prev => ({ ...prev, [rowKey]: row?.telegramLink || '' }));
     };
 
     const cancelEditingRowName = (rowId) => {
         setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
+        setEditingTelegramLinkRowId(null);
         setRowNameDrafts(prev => {
+            const next = { ...prev };
+            delete next[rowId];
+            return next;
+        });
+        setTelegramLinkDrafts(prev => {
             const next = { ...prev };
             delete next[rowId];
             return next;
         });
     };
 
-    const saveEditingRowName = (rowId) => {
+    const saveEditingRowName = async (rowId) => {
+        const row = table?.rows?.find(r => r._id === rowId);
+        if (!row) {
+            setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
+            setEditingTelegramLinkRowId(null);
+            return;
+        }
+
+        const nextName = rowNameDrafts[rowId] ?? row.name ?? '';
+        const nextTelegramLink = telegramLinkDrafts[rowId] ?? row.telegramLink ?? '';
+        const normalizedTelegramLink = typeof nextTelegramLink === 'string' ? nextTelegramLink.trim() : '';
+
+        if (!validateTelegramLinkValue(normalizedTelegramLink)) {
+            addToast('Telegram link formati noto\'g\'ri', 'error');
+            return;
+        }
+
+        const nextRows = table.rows.map(r => r._id === rowId ? { ...r, name: nextName, telegramLink: normalizedTelegramLink } : r);
+        setTable(prev => ({ ...prev, rows: nextRows }));
         setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
-        handleRowUpdateLocal(rowId, 'name', rowNameDrafts[rowId] ?? '');
-        handleGlobalSave();
+        setEditingTelegramLinkRowId(null);
+        handleGlobalSave(nextRows);
     };
 
     // Add Row via API
@@ -751,20 +775,6 @@ const AdminTableDetail = () => {
                                                         autoFocus
                                                         onKeyDown={(e) => e.key === 'Enter' && saveEditingRowName(row._id)}
                                                     />
-                                                    <button
-                                                        className="btn btn-sm btn-secondary"
-                                                        onClick={() => cancelEditingRowName(row._id)}
-                                                        title="Bekor qilish"
-                                                    >
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                                    </button>
-                                                    <button
-                                                        className="btn btn-sm btn-success"
-                                                        onClick={() => saveEditingRowName(row._id)}
-                                                        title="Tahrirni saqlash"
-                                                    >
-                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                                    </button>
                                                 </div>
                                             ) : (
                                                 <div className="row-name-control" style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', minWidth: 0 }}>
@@ -787,6 +797,45 @@ const AdminTableDetail = () => {
                                     </div>
 
                                     <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                        <div className="telegram-link-action-group" style={{ display: 'flex', gap: '6px', alignItems: 'center' }}>
+                                            {editingRowIds[row._id] ? (
+                                                <div className="telegram-link-editor" style={{ display: 'flex', gap: '6px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        className="input"
+                                                        type="text"
+                                                        value={telegramLinkDrafts[row?._id || row?.id] ?? ''}
+                                                        onChange={(e) => setTelegramLinkDrafts(prev => ({ ...prev, [row?._id || row?.id]: e.target.value }))}
+                                                        placeholder="[text](tg://user?id=USER_ID)"
+                                                        style={{ minWidth: '220px' }}
+                                                    />
+                                                    <button className="btn btn-sm btn-secondary" onClick={() => cancelEditingRowName(row._id)} title="Bekor qilish">
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                    </button>
+                                                    <button className="btn btn-sm btn-success" onClick={() => saveEditingRowName(row._id)} title="Tahrirni saqlash">
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <>
+                                                    <button
+                                                        className="btn btn-sm btn-secondary telegram-action-btn"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (row.telegramLink && row.telegramLink.trim()) {
+                                                                openTelegramLink(row.telegramLink);
+                                                            }
+                                                        }}
+                                                        title="Telegram link"
+                                                    >
+                                                        {getTelegramButtonLabel(row.telegramLink)}
+                                                    </button>
+                                                    <button className="btn btn-sm btn-secondary edit-row-btn" onClick={() => startEditingRowName(row)} title="Ismni tahrirlash">
+                                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                                        Tahrirlash
+                                                    </button>
+                                                </>
+                                            )}
+                                        </div>
                                         {table.roles && table.roles.length > 0 && (
                                             <select
                                                 className="input compact-select"
@@ -799,51 +848,6 @@ const AdminTableDetail = () => {
                                                 {table.roles.map(r => <option key={r} value={r}>{r}</option>)}
                                             </select>
                                         )}
-                                        {!editingRowIds[row._id] && (
-                                            <button className="btn btn-sm btn-secondary edit-row-btn" onClick={() => startEditingRowName(row)} title="Ismni tahrirlash">
-                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                                                Tahrirlash
-                                            </button>
-                                        )}
-                                        {editingTelegramLinkRowId === (row?._id || row?.id) ? (
-                                            <div className="telegram-link-editor" style={{ display: 'flex', gap: '6px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
-                                                <input
-                                                    className="input"
-                                                    type="text"
-                                                    value={telegramLinkDrafts[row?._id || row?.id] ?? ''}
-                                                    onChange={(e) => setTelegramLinkDrafts(prev => ({ ...prev, [row?._id || row?.id]: e.target.value }))}
-                                                    placeholder="[text](tg://user?id=USER_ID)"
-                                                    style={{ minWidth: '220px' }}
-                                                />
-                                                <button className="btn btn-sm btn-success" onClick={() => saveTelegramLink(row)} title="Saqlash">✓</button>
-                                                <button className="btn btn-sm btn-ghost" onClick={cancelEditingTelegramLink} title="Bekor qilish">✕</button>
-                                            </div>
-                                        ) : (
-                                            <div className="telegram-link-action-group">
-                                                <button
-                                                    className="btn btn-sm btn-secondary telegram-action-btn"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        if (row.telegramLink && row.telegramLink.trim()) {
-                                                            openTelegramLink(row.telegramLink);
-                                                        }
-                                                    }}
-                                                    title="Telegram link"
-                                                >
-                                                    {getTelegramButtonLabel(row.telegramLink)}
-                                                </button>
-                                                <button
-                                                    className="btn-ghost telegram-edit-btn"
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        startEditingTelegramLink(row);
-                                                    }}
-                                                    title="Telegram linkni tahrirlash"
-                                                >
-                                                    ✎
-                                                </button>
-                                            </div>
-                                        )}
                                         <button className="btn btn-sm btn-primary" onClick={() => handleAddTaskLocal(row._id)} disabled={creatingTasks[row._id]}>
                                             {creatingTasks[row._id] ? <SpinnerIcon /> : "Vazifa qo'shish"}
                                         </button>
@@ -855,14 +859,7 @@ const AdminTableDetail = () => {
                                                 </svg>
                                             )}
                                         </button>
-                                        <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                                            <svg
-                                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                                style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
-                                            >
-                                                <polyline points="6 9 12 15 18 9" />
-                                            </svg>
-                                        </div>
+                                        <div className="row-chevron" style={{ display: 'none' }} />
                                     </div>
                                 </div>
 
@@ -1044,20 +1041,26 @@ const AdminTableDetail = () => {
                                 <label>Tafsilot (Text)</label>
                                 {isEditingModalDesc ? (
                                     <textarea
-                                        className="input textarea"
+                                        ref={descriptionTextareaRef}
+                                        className="input textarea modal-description-textarea"
                                         placeholder="Vazifa tafsilotini kiriting..."
                                         value={modalTask.description}
-                                        onChange={(e) => setModalTask({ ...modalTask, description: e.target.value })}
+                                        onChange={(e) => {
+                                            setModalTask({ ...modalTask, description: e.target.value });
+                                            // Trigger height adjustment after state update
+                                            setTimeout(adjustModalDescriptionHeight, 0);
+                                        }}
+                                        onFocus={adjustModalDescriptionHeight}
                                         onBlur={() => setIsEditingModalDesc(false)}
-                                        style={{ minHeight: '120px' }}
+                                        style={{ minHeight: '140px', overflow: 'hidden', resize: 'none', height: 'auto' }}
                                         autoFocus
                                     />
                                 ) : (
                                     <div
-                                        className="input textarea markdown-live-preview"
+                                        className="input textarea markdown-live-preview modal-description-preview"
                                         onClick={() => setIsEditingModalDesc(true)}
                                         dangerouslySetInnerHTML={renderFormattedText(modalTask.description || "Vazifa tafsilotini kiriting...")}
-                                        style={{ cursor: 'text', minHeight: '120px' }}
+                                        style={{ cursor: 'text', minHeight: '140px' }}
                                     />
                                 )}
                             </div>

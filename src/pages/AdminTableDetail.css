@@ -313,6 +313,13 @@
     flex: 0 0 auto !important;
     padding: 0 10px !important;
     font-size: 13px !important;
+    height: 38px !important;
+    line-height: 1.2 !important;
+    appearance: auto !important;
+    background-color: var(--bg-input) !important;
+    color: var(--text-primary) !important;
+    border: 1px solid var(--border-color) !important;
+    border-radius: var(--radius-md) !important;
 }
 
 .row-actions {
@@ -340,11 +347,22 @@
 }
 
 .edit-row-btn {
-    order: -1;
+    order: 1;
+}
+
+.telegram-action-btn {
+    order: 0;
+}
+
+.telegram-link-action-group {
+    order: 0;
 }
 
 .row-chevron {
-    color: var(--text-muted);
+    display: none !important;
+    width: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
     flex-shrink: 0;
 }
 
@@ -705,62 +723,71 @@
         align-items: stretch;
     }
 
+    .row-actions {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 8px;
+        align-items: stretch;
+        width: 100%;
+    }
+
     .row-actions .btn,
     .row-actions .compact-select {
-        flex: 1 1 calc(50% - 4px);
+        flex: initial;
         min-width: 0;
-        width: auto;
+        width: 100%;
         max-width: 100%;
         font-size: 12px;
         white-space: nowrap;
     }
 
-    .row-actions .compact-select {
-        flex-basis: calc(50% - 4px) !important;
-        max-width: calc(50% - 4px) !important;
-    }
-
-    .row-actions .edit-row-btn {
-        flex-basis: calc(50% - 4px) !important;
-        max-width: calc(50% - 4px) !important;
-    }
-
     .row-actions .telegram-link-action-group {
-        flex-basis: calc(50% - 4px) !important;
-        max-width: calc(50% - 4px) !important;
+        grid-column: 1 / -1;
+        grid-row: 1;
+        width: 100%;
+        display: flex;
+        gap: 8px;
+        align-items: stretch;
     }
 
-    .row-actions .telegram-action-btn {
+    .row-actions .telegram-action-btn,
+    .row-actions .edit-row-btn {
+        flex: 1 1 0;
+        min-width: 0;
+        width: 100%;
         white-space: normal;
         overflow-wrap: anywhere;
         line-height: 1.2;
     }
 
-    .row-actions .btn.btn-primary,
-    .row-actions .btn.btn-danger {
-        flex-basis: calc(50% - 4px) !important;
-        max-width: calc(50% - 4px) !important;
+    .row-actions .compact-select {
+        grid-column: 1 / 2;
+        grid-row: 2;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex-basis: auto !important;
     }
 
     .row-actions .btn.btn-primary {
-        order: 2;
+        grid-column: 2 / 3;
+        grid-row: 2;
+        width: 100% !important;
+        max-width: 100% !important;
+        flex-basis: auto !important;
     }
 
     .row-actions .btn.btn-danger {
-        flex-basis: 100% !important;
+        grid-column: 1 / -1;
+        grid-row: 3;
+        width: 100% !important;
         max-width: 100% !important;
-        order: 5;
-        margin-top: 4px;
+        flex-basis: auto !important;
+        margin-top: 0;
     }
 
     .row-actions .row-chevron {
-        order: 4;
-        margin-left: 0 !important;
-        margin-right: auto !important;
-        flex-basis: auto !important;
-        display: flex !important;
-        justify-content: flex-start !important;
-        align-self: flex-start !important;
+        display: none !important;
+        order: 999;
     }
 
     .row-actions .btn:last-child {

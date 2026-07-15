@@ -101,7 +101,7 @@ const PublicTableView = () => {
             .replace(/'/g, '&#39;');
 
         // 1. Hyperlink [text](URL)
-        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: underline;">$1</a>');
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: none;">$1</a>');
         // 2. Bold *text*
         escaped = escaped.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
         // 3. Underline __text__
@@ -261,14 +261,14 @@ const PublicTableView = () => {
                         {group.rows.map((row, rowIndex) => (
                             <div key={row._id} className="row-card" style={{ animationDelay: `${(groupIndex + rowIndex) * 0.03}s` }}>
 
-                                <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px', cursor: 'pointer' }}>
-                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
+                                <div className="row-header" onClick={() => toggleRow(row._id)} style={{ cursor: 'pointer' }}>
+                                    <div className="row-title-row">
                                         <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
                                             {renderNameText(row.name, row.hideName)}
                                         </span>
                                     </div>
-                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
+                                    <div className="row-meta-row">
+                                        <div className="row-meta-group">
                                             {row.role && (
                                                 <div className="row-role-pill">
                                                     Rol: <b>{row.role}</b>

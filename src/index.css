@@ -205,6 +205,13 @@ body {
 .textarea {
   resize: vertical;
   min-height: 100px;
+  line-height: 1.5;
+}
+
+.modal-body .modal-description-textarea,
+.modal-body .modal-description-preview {
+  min-height: 140px;
+  flex: 0 0 auto;
 }
 
 /* ===== CARDS ===== */
@@ -272,6 +279,9 @@ body {
   flex-direction: column;
   gap: 16px;
   overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+  overflow-anchor: none;
   min-height: 0;
   flex: 1 1 auto;
 }
