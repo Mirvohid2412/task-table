@@ -208,6 +208,31 @@
     overflow: hidden;
 }
 
+.role-group {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.role-group:last-child {
+    border-bottom: none;
+}
+
+.role-group-header {
+    padding: 10px 20px 0;
+}
+
+.role-group-title {
+    display: inline-flex;
+    align-items: center;
+    padding: 6px 10px;
+    border-radius: 999px;
+    background: var(--bg-input);
+    color: var(--accent-primary);
+    font-size: 12px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
 .row-card {
     border-bottom: 1px solid var(--border-color);
     animation: slideUp 0.3s ease both;
@@ -297,18 +322,37 @@
 }
 
 /* Name stack layout */
+.row-name-role-group {
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
+.row-name-control {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+    width: 100%;
+}
+
 .name-stack {
-    display: inline-flex;
-    flex-wrap: wrap;
+    display: flex !important;
+    flex-direction: row !important;
+    flex-wrap: nowrap !important;
     gap: 4px;
     align-items: center;
     min-width: 0;
+    white-space: nowrap;
 }
 
 .name-word {
     display: inline-block;
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
+    word-break: keep-all;
 }
 
 /* Tasks Section */
@@ -505,8 +549,32 @@
     }
 
     .detail-header {
-        justify-content: center;
-        text-align: center;
+        display: flex;
+        flex-direction: column;
+        align-items: flex-start;
+        justify-content: flex-start;
+        text-align: left;
+        gap: 8px;
+        margin-bottom: 16px;
+    }
+
+    .detail-header > .btn-ghost {
+        margin-top: 6px;
+        align-self: flex-start;
+        order: 1;
+    }
+
+    .detail-header-right {
+        width: 100%;
+        justify-content: flex-start;
+        margin-top: 2px;
+        gap: 6px;
+        order: 2;
+    }
+
+    .detail-header-right .btn {
+        margin-right: 0;
+        justify-content: flex-start;
     }
 
     .rows-container {
@@ -520,6 +588,20 @@
         align-items: stretch;
         padding: 16px;
         gap: 12px;
+    }
+
+    .row-name-role-group {
+        width: 100%;
+    }
+
+    .row-name-control {
+        width: 100%;
+    }
+
+    .row-name-role-group .input,
+    .row-name-role-group select {
+        width: 100% !important;
+        min-width: 0 !important;
     }
 
     .row-num {
@@ -570,11 +652,6 @@
         grid-template-columns: 1fr;
     }
 
-    .detail-header-right {
-        width: 100%;
-        justify-content: flex-end;
-    }
-
     .global-actions {
         flex-direction: column;
         gap: 12px;
@@ -597,17 +674,28 @@
 
 
 @media (max-width: 500px) {
+    .row-name-control {
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        justify-content: flex-start !important;
+    }
+
     .name-stack {
-        display: flex !important;
-        flex-direction: column !important;
-        align-items: flex-start !important;
-        gap: 2px !important;
-        width: 100% !important;
+        display: inline-flex !important;
+        flex-direction: row !important;
+        flex-wrap: nowrap !important;
+        align-items: center !important;
+        gap: 4px !important;
+        width: auto !important;
+        white-space: nowrap !important;
+        overflow: hidden !important;
     }
 
     .name-word {
-        display: block !important;
+        display: inline-block !important;
+        white-space: nowrap !important;
         line-height: 1.35 !important;
+        flex-shrink: 0 !important;
     }
 
     .row-name {

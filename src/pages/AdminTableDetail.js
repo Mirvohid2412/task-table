@@ -395,17 +395,51 @@ const AdminTableDetail = () => {
 
 
 
-    // Filtered rows
-    const filteredRows = (table?.rows || [])
-        .filter(row => {
-            if (activeRoleFilter === 'all') return true;
-            return row.role === activeRoleFilter;
-        })
-        .sort((a, b) => {
-            const nameA = (a.name || '').toString().trim().toLowerCase();
-            const nameB = (b.name || '').toString().trim().toLowerCase();
-            return nameA.localeCompare(nameB, 'uz', { sensitivity: 'base' });
-        });
+    const sortByName = (a, b) => {
+        const nameA = (a.name || '').toString().trim().toLowerCase();
+        const nameB = (b.name || '').toString().trim().toLowerCase();
+        return nameA.localeCompare(nameB, 'uz', { sensitivity: 'base' });
+    };
+
+    const sortedRoles = (table?.roles || [])
+        .filter(role => role && role.toString().trim())
+        .slice()
+        .sort((a, b) => a.localeCompare(b, 'uz', { sensitivity: 'base' }));
+
+    const groupedRowsByRole = (() => {
+        const allRows = (table?.rows || []).slice();
+
+        if (activeRoleFilter !== 'all') {
+            return [{
+                role: activeRoleFilter,
+                rows: allRows
+                    .filter(row => row.role === activeRoleFilter)
+                    .sort(sortByName)
+            }];
+        }
+
+        const groups = sortedRoles.map(role => ({
+            role,
+            rows: allRows
+                .filter(row => (row.role || '').toString().trim() === role)
+                .sort(sortByName)
+        })).filter(group => group.rows.length > 0);
+
+        const unassignedRows = allRows
+            .filter(row => {
+                const value = (row.role || '').toString().trim();
+                return !sortedRoles.includes(value);
+            })
+            .sort(sortByName);
+
+        if (unassignedRows.length > 0) {
+            groups.push({ role: 'Rolsiz', rows: unassignedRows });
+        }
+
+        return groups;
+    })();
+
+    const totalVisibleRows = groupedRowsByRole.reduce((count, group) => count + group.rows.length, 0);
 
     if (loading) {
         return (
@@ -475,8 +509,8 @@ const AdminTableDetail = () => {
                     >
                         Hammasi
                     </span>
-                    {table.roles?.map((role, index) => (
-                        <div key={index} className="role-item">
+                    {sortedRoles.map((role, index) => (
+                        <div key={`${role}-${index}`} className="role-item">
                             <span
                                 className={`badge badge-role ${activeRoleFilter === role ? 'active' : ''}`}
                                 onClick={() => setActiveRoleFilter(role)}
@@ -485,7 +519,7 @@ const AdminTableDetail = () => {
                             </span>
                             <button
                                 className="role-delete-btn"
-                                onClick={() => handleDeleteRole(index)}
+                                onClick={() => handleDeleteRole(table.roles?.findIndex(r => r === role) ?? index)}
                                 title="O'chirish"
                             >
                                 ×
@@ -517,223 +551,234 @@ const AdminTableDetail = () => {
             </div>
 
             <div className="rows-container">
-                {filteredRows.map((row, index) => (
-                    <div key={row._id} className="row-card" style={{ animationDelay: `${index * 0.03}s` }}>
-                        {/* Editable row header */}
-                        <div className="row-header" onClick={(e) => { if (e.target.closest('.row-actions') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.closest('button')) return; toggleRow(row._id); }} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
-
-                            <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
-                                {editingRowIds[row._id] ? (
-                                    <div style={{ display: 'flex', gap: '6px', flex: 1 }} onClick={(e) => e.stopPropagation()}>
-                                        <input
-                                            className="input"
-                                            value={row.name}
-                                            style={{ flex: 1 }}
-                                            onChange={(e) => handleRowUpdateLocal(row._id, 'name', e.target.value)}
-                                            placeholder="Ism / Nomi"
-                                            autoFocus
-                                            onKeyDown={(e) => e.key === 'Enter' && setEditingRowIds(prev => ({ ...prev, [row._id]: false }))}
-                                        />
-                                        <button
-                                            className="btn btn-sm btn-secondary"
-                                            onClick={() => {
-                                                setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
-                                                fetchTable();
-                                            }}
-                                            title="Bekor qilish"
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
-                                        </button>
-                                        <button
-                                            className="btn btn-sm btn-success"
-                                            onClick={() => {
-                                                setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
-                                                handleGlobalSave();
-                                            }}
-                                            title="Tahrirni saqlash"
-                                        >
-                                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
-                                        </button>
-                                    </div>
-                                ) : (
-                                    <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', minWidth: 0 }}>
-                                        <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
-                                            {renderNameText(row.name, row.hideName)}
-                                        </span>
-                                        <button
-                                            className={`btn btn-sm ${row.hideName ? 'btn-danger' : 'btn-primary'}`}
-                                            onClick={(e) => { e.stopPropagation(); handleToggleHideNameForRow(row._id); }}
-                                            title={row.hideName ? 'Ismni ko\'rsatish' : 'Ismni yashirish'}
-                                            style={{ padding: '4px 10px', fontSize: '12px', minWidth: '92px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
-                                            disabled={togglingNameVisibility[row._id]}
-                                        >
-                                            {togglingNameVisibility[row._id] ? <SpinnerIcon /> : (row.hideName ? 'Ko\'rsatish' : 'Yashirish')}
-                                        </button>
-                                    </div>
-                                )}
-
-                                {table.roles && table.roles.length > 0 && (
-                                    <select
-                                        className="input"
-                                        style={{ width: 'auto', minWidth: '150px' }}
-                                        value={row.role || ''}
-                                        onChange={(e) => handleRowRoleSelect(row._id, e.target.value)}
-                                        onClick={(e) => e.stopPropagation()}
-                                    >
-                                        <option value="">Rol tanlang...</option>
-                                        {table.roles.map(r => <option key={r} value={r}>{r}</option>)}
-                                    </select>
-                                )}
-                            </div>
-
-                            <div className="row-actions" onClick={(e) => e.stopPropagation()}>
-                                {!editingRowIds[row._id] && (
-                                    <button className="btn btn-sm btn-secondary" onClick={() => setEditingRowIds(prev => ({ ...prev, [row._id]: true }))} title="Ismni tahrirlash">
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
-                                        Tahrirlash
-                                    </button>
-                                )}
-                                <button className="btn btn-sm btn-primary" onClick={() => handleAddTaskLocal(row._id)} disabled={creatingTasks[row._id]}>
-                                    {creatingTasks[row._id] ? <SpinnerIcon /> : "Vazifa qo'shish"}
-                                </button>
-                                <button className="btn btn-sm btn-danger" onClick={() => handleDeleteRowLocal(row._id)} disabled={deletingRowIds[row._id]} title="O'chirish">
-                                    {deletingRowIds[row._id] ? <SpinnerIcon /> : (
-                                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                            <polyline points="3 6 5 6 21 6" />
-                                            <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
-                                        </svg>
-                                    )}
-                                </button>
-                                <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px' }}>
-                                    <svg
-                                        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                        style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
-                                    >
-                                        <polyline points="6 9 12 15 18 9" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Expanded Tasks */}
-                        {expandedRows[row._id] === true && (
-                            <div className="row-tasks">
-                                {!row.tasks?.length ? (
-                                    <div className="no-tasks">Vazifalar yo'q</div>
-                                ) : (
-                                    <div className="tasks-table">
-                                        <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, alignItems: 'center' }}>
-                                            <div style={{ width: '36px', flexShrink: 0 }}>#</div>
-                                            <div style={{ flex: 2, minWidth: '120px' }}>Vazifa</div>
-                                            <div style={{ flex: 1, minWidth: '100px' }}>Boshlanish</div>
-                                            <div style={{ flex: 1, minWidth: '100px' }}>Tugash</div>
-                                            <div style={{ flex: 1, minWidth: '100px' }}>Istisno kechiktirish</div>
-                                            <div style={{ width: '180px', flexShrink: 0 }}></div>
-                                        </div>
-                                        {(row.tasks || []).map((task, tIndex) => (
-                                            <div key={task._id} className="task-row" style={{ display: 'flex', gap: '8px', padding: '8px 12px', alignItems: 'center' }}>
-                                                <div style={{ width: '36px', flexShrink: 0, fontWeight: 600, color: 'var(--accent-primary)' }}>{tIndex + 1}</div>
-
-                                                <div style={{ flex: 2, minWidth: '120px' }}>
-                                                    <button
-                                                        className="btn btn-sm btn-primary"
-                                                        style={{ width: '100%', wordBreak: 'break-all', border: '1px solid rgba(108, 92, 231, 0.35)', fontWeight: 700 }}
-                                                        onClick={() => openTaskModal(task, row._id)}
-                                                    >
-                                                        Vazifani ko'rish uchun bosing
-                                                    </button>
-                                                </div>
-
-                                                <div style={{ flex: 1, minWidth: '100px' }}>
-                                                    <label className="mobile-label">Boshlanish</label>
-                                                    <input
-                                                        type="text"
-                                                        className="input"
-                                                        placeholder="00.00.0000 00:00"
-                                                        value={task.startDate}
-                                                        disabled={!editingTaskIds[task._id]}
-                                                        style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
-                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'startDate', formatDateTimeInput(e.target.value))}
-                                                    />
-                                                </div>
-
-                                                <div style={{ flex: 1, minWidth: '100px' }}>
-                                                    <label className="mobile-label">Tugash</label>
-                                                    <input
-                                                        type="text"
-                                                        className="input"
-                                                        placeholder="00.00.0000 00:00"
-                                                        value={task.endDate}
-                                                        disabled={!editingTaskIds[task._id]}
-                                                        style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
-                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'endDate', formatDateTimeInput(e.target.value))}
-                                                    />
-                                                </div>
-
-                                                <div style={{ flex: 1, minWidth: '100px' }}>
-                                                    <label className="mobile-label">Istisno kechiktirish</label>
-                                                    <input
-                                                        type="text"
-                                                        className="input"
-                                                        placeholder="00.00.0000 00:00"
-                                                        value={task.delay}
-                                                        disabled={!editingTaskIds[task._id]}
-                                                        style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
-                                                        onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'delay', formatDateTimeInput(e.target.value))}
-                                                    />
-                                                </div>
-
-                                                <div style={{ width: '180px', flexShrink: 0, display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
-                                                    {editingTaskIds[task._id] ? (
-                                                        <>
-                                                            <button
-                                                                className="btn btn-sm btn-secondary"
-                                                                onClick={() => {
-                                                                    setEditingTaskIds(prev => ({ ...prev, [task._id]: false }));
-                                                                    fetchTable(); // Reset un-saved changes
-                                                                }}
-                                                            >
-                                                                Bekor qilish
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-sm btn-success"
-                                                                onClick={() => {
-                                                                    setEditingTaskIds(prev => ({ ...prev, [task._id]: false }));
-                                                                    handleGlobalSave();
-                                                                }}
-                                                            >
-                                                                Saqlash
-                                                            </button>
-                                                        </>
-                                                    ) : (
-                                                        <>
-                                                            <button
-                                                                className="btn btn-sm btn-danger"
-                                                                onClick={() => handleDeleteTaskLocal(row._id, task._id)}
-                                                                disabled={deletingTaskIds[task._id]}
-                                                            >
-                                                                {deletingTaskIds[task._id] ? <SpinnerIcon /> : "O'chirish"}
-                                                            </button>
-                                                            <button
-                                                                className="btn btn-sm btn-secondary"
-                                                                onClick={() => setEditingTaskIds(prev => ({ ...prev, [task._id]: true }))}
-                                                            >
-                                                                Tahrirlash
-                                                            </button>
-                                                        </>
-                                                    )}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                {groupedRowsByRole.map((group, groupIndex) => (
+                    <div key={`${group.role || 'role'}-${groupIndex}`} className="role-group">
+                        {activeRoleFilter === 'all' && (
+                            <div className="role-group-header">
+                                <span className="role-group-title">{group.role}</span>
                             </div>
                         )}
+                        {group.rows.map((row, rowIndex) => (
+                            <div key={row._id} className="row-card" style={{ animationDelay: `${(groupIndex + rowIndex) * 0.03}s` }}>
+                                {/* Editable row header */}
+                                <div className="row-header" onClick={(e) => { if (e.target.closest('.row-actions') || e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.closest('button')) return; toggleRow(row._id); }} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
+
+                                    <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
+                                        <div className="row-name-role-group">
+                                            {editingRowIds[row._id] ? (
+                                                <div className="row-name-control" style={{ display: 'flex', gap: '6px', flex: 1 }} onClick={(e) => e.stopPropagation()}>
+                                                    <input
+                                                        className="input"
+                                                        value={row.name}
+                                                        style={{ flex: 1 }}
+                                                        onChange={(e) => handleRowUpdateLocal(row._id, 'name', e.target.value)}
+                                                        placeholder="Ism / Nomi"
+                                                        autoFocus
+                                                        onKeyDown={(e) => e.key === 'Enter' && setEditingRowIds(prev => ({ ...prev, [row._id]: false }))}
+                                                    />
+                                                    <button
+                                                        className="btn btn-sm btn-secondary"
+                                                        onClick={() => {
+                                                            setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
+                                                            fetchTable();
+                                                        }}
+                                                        title="Bekor qilish"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                                                    </button>
+                                                    <button
+                                                        className="btn btn-sm btn-success"
+                                                        onClick={() => {
+                                                            setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
+                                                            handleGlobalSave();
+                                                        }}
+                                                        title="Tahrirni saqlash"
+                                                    >
+                                                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                    </button>
+                                                </div>
+                                            ) : (
+                                                <div className="row-name-control" style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', minWidth: 0 }}>
+                                                    <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
+                                                        {renderNameText(row.name, row.hideName)}
+                                                    </span>
+                                                    <button
+                                                        className={`btn btn-sm ${row.hideName ? 'btn-danger' : 'btn-primary'}`}
+                                                        onClick={(e) => { e.stopPropagation(); handleToggleHideNameForRow(row._id); }}
+                                                        title={row.hideName ? 'Ismni ko\'rsatish' : 'Ismni yashirish'}
+                                                        style={{ padding: '4px 10px', fontSize: '12px', minWidth: '92px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
+                                                        disabled={togglingNameVisibility[row._id]}
+                                                    >
+                                                        {togglingNameVisibility[row._id] ? <SpinnerIcon /> : (row.hideName ? 'Ko\'rsatish' : 'Yashirish')}
+                                                    </button>
+                                                </div>
+                                            )}
+
+                                            {table.roles && table.roles.length > 0 && (
+                                                <select
+                                                    className="input"
+                                                    style={{ width: 'auto', minWidth: '150px' }}
+                                                    value={row.role || ''}
+                                                    onChange={(e) => handleRowRoleSelect(row._id, e.target.value)}
+                                                    onClick={(e) => e.stopPropagation()}
+                                                >
+                                                    <option value="">Rol tanlang...</option>
+                                                    {table.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                                                </select>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                        {!editingRowIds[row._id] && (
+                                            <button className="btn btn-sm btn-secondary" onClick={() => setEditingRowIds(prev => ({ ...prev, [row._id]: true }))} title="Ismni tahrirlash">
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
+                                                Tahrirlash
+                                            </button>
+                                        )}
+                                        <button className="btn btn-sm btn-primary" onClick={() => handleAddTaskLocal(row._id)} disabled={creatingTasks[row._id]}>
+                                            {creatingTasks[row._id] ? <SpinnerIcon /> : "Vazifa qo'shish"}
+                                        </button>
+                                        <button className="btn btn-sm btn-danger" onClick={() => handleDeleteRowLocal(row._id)} disabled={deletingTaskIds[row._id]} title="O'chirish">
+                                            {deletingTaskIds[row._id] ? <SpinnerIcon /> : (
+                                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                                    <polyline points="3 6 5 6 21 6" />
+                                                    <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2" />
+                                                </svg>
+                                            )}
+                                        </button>
+                                        <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px' }}>
+                                            <svg
+                                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                                style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
+                                            >
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Expanded Tasks */}
+                                {expandedRows[row._id] === true && (
+                                    <div className="row-tasks">
+                                        {!row.tasks?.length ? (
+                                            <div className="no-tasks">Vazifalar yo'q</div>
+                                        ) : (
+                                            <div className="tasks-table">
+                                                <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, alignItems: 'center' }}>
+                                                    <div style={{ width: '36px', flexShrink: 0 }}>#</div>
+                                                    <div style={{ flex: 2, minWidth: '120px' }}>Vazifa</div>
+                                                    <div style={{ flex: 1, minWidth: '100px' }}>Boshlanish</div>
+                                                    <div style={{ flex: 1, minWidth: '100px' }}>Tugash</div>
+                                                    <div style={{ flex: 1, minWidth: '100px' }}>Istisno kechiktirish</div>
+                                                    <div style={{ width: '180px', flexShrink: 0 }}></div>
+                                                </div>
+                                                {(row.tasks || []).map((task, tIndex) => (
+                                                    <div key={task._id} className="task-row" style={{ display: 'flex', gap: '8px', padding: '8px 12px', alignItems: 'center' }}>
+                                                        <div style={{ width: '36px', flexShrink: 0, fontWeight: 600, color: 'var(--accent-primary)' }}>{tIndex + 1}</div>
+
+                                                        <div style={{ flex: 2, minWidth: '120px' }}>
+                                                            <button
+                                                                className="btn btn-sm btn-primary"
+                                                                style={{ width: '100%', wordBreak: 'break-all', border: '1px solid rgba(108, 92, 231, 0.35)', fontWeight: 700 }}
+                                                                onClick={() => openTaskModal(task, row._id)}
+                                                            >
+                                                                Vazifani ko'rish uchun bosing
+                                                            </button>
+                                                        </div>
+
+                                                        <div style={{ flex: 1, minWidth: '100px' }}>
+                                                            <label className="mobile-label">Boshlanish</label>
+                                                            <input
+                                                                type="text"
+                                                                className="input"
+                                                                placeholder="00.00.0000 00:00"
+                                                                value={task.startDate}
+                                                                disabled={!editingTaskIds[task._id]}
+                                                                style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
+                                                                onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'startDate', formatDateTimeInput(e.target.value))}
+                                                            />
+                                                        </div>
+
+                                                        <div style={{ flex: 1, minWidth: '100px' }}>
+                                                            <label className="mobile-label">Tugash</label>
+                                                            <input
+                                                                type="text"
+                                                                className="input"
+                                                                placeholder="00.00.0000 00:00"
+                                                                value={task.endDate}
+                                                                disabled={!editingTaskIds[task._id]}
+                                                                style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
+                                                                onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'endDate', formatDateTimeInput(e.target.value))}
+                                                            />
+                                                        </div>
+
+                                                        <div style={{ flex: 1, minWidth: '100px' }}>
+                                                            <label className="mobile-label">Istisno kechiktirish</label>
+                                                            <input
+                                                                type="text"
+                                                                className="input"
+                                                                placeholder="00.00.0000 00:00"
+                                                                value={task.delay}
+                                                                disabled={!editingTaskIds[task._id]}
+                                                                style={{ opacity: !editingTaskIds[task._id] ? 0.7 : 1 }}
+                                                                onChange={(e) => handleTaskUpdateLocal(row._id, task._id, 'delay', formatDateTimeInput(e.target.value))}
+                                                            />
+                                                        </div>
+
+                                                        <div style={{ width: '180px', flexShrink: 0, display: 'flex', gap: '6px', justifyContent: 'flex-end' }}>
+                                                            {editingTaskIds[task._id] ? (
+                                                                <>
+                                                                    <button
+                                                                        className="btn btn-sm btn-secondary"
+                                                                        onClick={() => {
+                                                                            setEditingTaskIds(prev => ({ ...prev, [task._id]: false }));
+                                                                            fetchTable(); // Reset un-saved changes
+                                                                        }}
+                                                                    >
+                                                                        Bekor qilish
+                                                                    </button>
+                                                                    <button
+                                                                        className="btn btn-sm btn-success"
+                                                                        onClick={() => {
+                                                                            setEditingTaskIds(prev => ({ ...prev, [task._id]: false }));
+                                                                            handleGlobalSave();
+                                                                        }}
+                                                                    >
+                                                                        Saqlash
+                                                                    </button>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <button
+                                                                        className="btn btn-sm btn-danger"
+                                                                        onClick={() => handleDeleteTaskLocal(row._id, task._id)}
+                                                                        disabled={deletingTaskIds[task._id]}
+                                                                    >
+                                                                        {deletingTaskIds[task._id] ? <SpinnerIcon /> : "O'chirish"}
+                                                                    </button>
+                                                                    <button
+                                                                        className="btn btn-sm btn-secondary"
+                                                                        onClick={() => setEditingTaskIds(prev => ({ ...prev, [task._id]: true }))}
+                                                                    >
+                                                                        Tahrirlash
+                                                                    </button>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 ))}
             </div>
 
-            {filteredRows.length === 0 && (
+            {totalVisibleRows === 0 && (
                 <div className="empty-state" style={{ borderBottom: '1px solid var(--border-color)', marginBottom: '16px' }}>
                     {activeRoleFilter !== 'all' ? (
                         <>

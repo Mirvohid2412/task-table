@@ -444,7 +444,7 @@
     }
 }
 
-@media (max-width: 500px) {
+/* @media (max-width: 500px) {
     .name-stack {
         display: flex !important;
         flex-direction: column !important;
@@ -461,4 +461,4 @@
     .row-name {
         font-size: 14px;
     }
-}
+} */
