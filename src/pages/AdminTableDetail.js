@@ -155,14 +155,32 @@ const AdminTableDetail = () => {
         if (!name) return 'Ism / Nomi (kiritilmagan)';
         const words = name.trim().split(/\s+/);
         return words.map(word => {
-            if (word.length <= 2) {
-                return '*'.repeat(word.length);
+            if (!word) return '';
+            const letters = word.replace(/[^A-Za-zА-Яа-яЁё]/g, '');
+            if (!letters) return word;
+            if (word.length <= 6) {
+                const prefix = word[0];
+                const suffix = word[word.length - 1];
+                const middle = '*'.repeat(Math.max(3, word.length - 2));
+                return `${prefix}${middle}${suffix}`;
             }
             const prefix = word.slice(0, 2);
             const suffix = word.slice(-2);
-            const middle = '*'.repeat(Math.max(1, word.length - 4));
+            const middle = '*'.repeat(Math.max(3, word.length - 4));
             return `${prefix}${middle}${suffix}`;
         }).join(' ');
+    };
+
+    const renderNameText = (name, hidden) => {
+        const fallback = 'Ism / Nomi (kiritilmagan)';
+        const value = hidden ? maskName(name) : (name ? name : fallback);
+        if (!value) {
+            return <span className="name-word">{fallback}</span>;
+        }
+        const words = value.trim().split(/\s+/);
+        return words.map((word, index) => (
+            <span key={`${word}-${index}`} className="name-word">{word}</span>
+        ));
     };
 
     // Masking function for "DD.MM.YYYY HH:MM"
@@ -378,10 +396,16 @@ const AdminTableDetail = () => {
 
 
     // Filtered rows
-    const filteredRows = table?.rows?.filter(row => {
-        if (activeRoleFilter === 'all') return true;
-        return row.role === activeRoleFilter;
-    }) || [];
+    const filteredRows = (table?.rows || [])
+        .filter(row => {
+            if (activeRoleFilter === 'all') return true;
+            return row.role === activeRoleFilter;
+        })
+        .sort((a, b) => {
+            const nameA = (a.name || '').toString().trim().toLowerCase();
+            const nameB = (b.name || '').toString().trim().toLowerCase();
+            return nameA.localeCompare(nameB, 'uz', { sensitivity: 'base' });
+        });
 
     if (loading) {
         return (
@@ -532,15 +556,15 @@ const AdminTableDetail = () => {
                                         </button>
                                     </div>
                                 ) : (
-                                    <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
-                                        <span style={{ fontWeight: 600, fontSize: '15px' }}>
-                                            {row.hideName ? maskName(row.name) : (row.name || 'Ism / Nomi (kiritilmagan)')}
+                                    <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', minWidth: 0 }}>
+                                        <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
+                                            {renderNameText(row.name, row.hideName)}
                                         </span>
                                         <button
                                             className={`btn btn-sm ${row.hideName ? 'btn-danger' : 'btn-primary'}`}
                                             onClick={(e) => { e.stopPropagation(); handleToggleHideNameForRow(row._id); }}
                                             title={row.hideName ? 'Ismni ko\'rsatish' : 'Ismni yashirish'}
-                                            style={{ padding: '4px 10px', fontSize: '12px', minWidth: '92px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                            style={{ padding: '4px 10px', fontSize: '12px', minWidth: '92px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}
                                             disabled={togglingNameVisibility[row._id]}
                                         >
                                             {togglingNameVisibility[row._id] ? <SpinnerIcon /> : (row.hideName ? 'Ko\'rsatish' : 'Yashirish')}

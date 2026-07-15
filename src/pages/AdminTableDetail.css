@@ -296,6 +296,21 @@
     flex-shrink: 0;
 }
 
+/* Name stack layout */
+.name-stack {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    min-width: 0;
+}
+
+.name-word {
+    display: inline-block;
+    white-space: normal;
+    word-break: break-word;
+}
+
 /* Tasks Section */
 .row-tasks {
     padding: 16px 20px 20px;
@@ -580,7 +595,21 @@
     }
 }
 
-@media (max-width: 480px) {
+
+@media (max-width: 500px) {
+    .name-stack {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px !important;
+        width: 100% !important;
+    }
+
+    .name-word {
+        display: block !important;
+        line-height: 1.35 !important;
+    }
+
     .row-name {
         font-size: 14px;
     }

@@ -117,6 +117,21 @@
     text-align: right;
 }
 
+/* Name stack layout */
+.name-stack {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    align-items: center;
+    min-width: 0;
+}
+
+.name-word {
+    display: inline-block;
+    white-space: normal;
+    word-break: break-word;
+}
+
 /* Tasks & Rows Layout */
 .rows-container {
     border: 1px solid var(--border-color);
@@ -339,64 +354,6 @@
 }
 
 /* Mobile */
-@media (max-width: 1024px) {
-    .detail-page {
-        padding: 0 12px;
-    }
-
-    .rows-container {
-        width: 95% !important;
-        max-width: 95% !important;
-        margin: 0 auto;
-    }
-
-    .row-card,
-    .row-header,
-    .row-actions,
-    .row-inputs-section {
-        width: 100% !important;
-        max-width: 100% !important;
-        min-width: 0 !important;
-    }
-
-    .table-detail-header {
-        display: none;
-    }
-
-    .task-row {
-        flex-direction: column;
-        background: var(--bg-card);
-        padding: 12px;
-        border: 1px solid var(--border-color);
-        gap: 8px;
-    }
-
-    .tasks-header {
-        display: none !important;
-    }
-
-    .mobile-label {
-        display: block !important;
-    }
-
-    .task-col,
-    .task-col-actions,
-    .task-col-num,
-    .task-row > div,
-    .task-row > div > * {
-        width: 100% !important;
-        min-width: 0 !important;
-    }
-
-    .task-row .input,
-    .task-row .btn,
-    .row-inputs-section .input,
-    .row-inputs-section select {
-        width: 100% !important;
-        min-width: 0 !important;
-    }
-}
-
 @media (max-width: 768px) {
     .detail-header {
         justify-content: center;
@@ -429,6 +386,7 @@
     .row-inputs-section > .row-role-pill {
         min-width: 0 !important;
         max-width: 100% !important;
+        width: 100% !important;
     }
 
     .row-role-pill {
@@ -486,7 +444,20 @@
     }
 }
 
-@media (max-width: 480px) {
+@media (max-width: 500px) {
+    .name-stack {
+        display: flex !important;
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        gap: 2px !important;
+        width: 100% !important;
+    }
+
+    .name-word {
+        display: block !important;
+        line-height: 1.35 !important;
+    }
+
     .row-name {
         font-size: 14px;
     }
