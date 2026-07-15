@@ -90,6 +90,60 @@ const PublicTableView = () => {
         ));
     };
 
+    const renderFormattedText = (text) => {
+        if (!text) return { __html: '' };
+        // Escape HTML
+        let escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        // 1. Hyperlink [text](URL)
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: underline;">$1</a>');
+        // 2. Bold *text*
+        escaped = escaped.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+        // 3. Underline __text__
+        escaped = escaped.replace(/__([^_]+)__/g, '<u>$1</u>');
+        // 4. Italic _text_
+        escaped = escaped.replace(/_([^_]+)_/g, '<em>$1</em>');
+        // 5. Strikethrough ~text~
+        escaped = escaped.replace(/~([^~]+)~/g, '<s>$1</s>');
+        // 6. Newlines
+        escaped = escaped.replace(/\n/g, '<br />');
+
+        return { __html: escaped };
+    };
+
+    const getTelegramButtonLabel = (value) => {
+        if (typeof value !== 'string') return "Telegramga o'tish";
+        const trimmed = value.trim();
+        if (!trimmed) return "Telegramga o'tish";
+        const match = trimmed.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        return match ? match[1] : trimmed;
+    };
+
+    const openTelegramLink = (value) => {
+        if (typeof value !== 'string') return;
+        const trimmed = value.trim();
+        if (!trimmed) return;
+        const match = trimmed.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        let url = match?.[2];
+        if (!url || (!url.startsWith('tg://') && !url.startsWith('https://t.me/'))) return;
+
+        if (url.startsWith('tg://user?id=')) {
+            const userId = url.split('=')[1];
+            url = `tg://openmessage?user_id=${userId}`;
+        }
+
+        if (url.startsWith('https://')) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+            window.location.href = url;
+        }
+    };
+
     const sortByName = (a, b) => {
         const nameA = (a.name || '').toString().trim().toLowerCase();
         const nameB = (b.name || '').toString().trim().toLowerCase();
@@ -207,26 +261,39 @@ const PublicTableView = () => {
                         {group.rows.map((row, rowIndex) => (
                             <div key={row._id} className="row-card" style={{ animationDelay: `${(groupIndex + rowIndex) * 0.03}s` }}>
 
-                                <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
-                                    <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
-                                        <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', minWidth: 0 }}>
+                                <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexWrap: 'nowrap', gap: '10px', cursor: 'pointer' }}>
+                                    <div className="row-text-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
+                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
                                             <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
                                                 {renderNameText(row.name, row.hideName)}
                                             </span>
                                         </div>
                                         {row.role && (
-                                            <div className="row-role-pill">
+                                            <div className="row-role-pill" style={{ alignSelf: 'flex-start' }}>
                                                 Rol: <b>{row.role}</b>
                                             </div>
                                         )}
-                                        <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginLeft: 'auto' }}>
-                                            <svg
-                                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                                style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
+                                        {row.telegramLink && row.telegramLink.trim() && (
+                                            <button
+                                                className="btn btn-sm btn-secondary"
+                                                onClick={(e) => {
+                                                    e.stopPropagation();
+                                                    openTelegramLink(row.telegramLink);
+                                                }}
+                                                title="Telegram link"
+                                                style={{ alignSelf: 'flex-start', marginTop: '4px' }}
                                             >
-                                                <polyline points="6 9 12 15 18 9" />
-                                            </svg>
-                                        </div>
+                                                {getTelegramButtonLabel(row.telegramLink)}
+                                            </button>
+                                        )}
+                                    </div>
+                                    <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px', flexShrink: 0 }}>
+                                        <svg
+                                            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                            style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
+                                        >
+                                            <polyline points="6 9 12 15 18 9" />
+                                        </svg>
                                     </div>
                                 </div>
 
@@ -307,15 +374,19 @@ const PublicTableView = () => {
                         <div className="modal-body">
                             <div className="modal-field">
                                 <label>Vazifa nomi</label>
-                                <div className="modal-readonly-value" style={{ padding: '10px 14px', background: 'var(--bg-input)', borderRadius: '6px', color: 'var(--text-primary)' }}>
-                                    {modalTask.name || "Ko'rsatilmagan"}
-                                </div>
+                                <div
+                                    className="modal-readonly-value markdown-live-preview"
+                                    style={{ padding: '10px 14px', background: 'var(--bg-input)', borderRadius: '6px', color: 'var(--text-primary)' }}
+                                    dangerouslySetInnerHTML={renderFormattedText(modalTask.name || "Ko'rsatilmagan")}
+                                />
                             </div>
                             <div className="modal-field" style={{ marginTop: '16px' }}>
                                 <label>Tafsilotlar</label>
-                                <div className="modal-readonly-value description" style={{ padding: '10px 14px', background: 'var(--bg-input)', borderRadius: '6px', color: 'var(--text-primary)', whiteSpace: 'pre-wrap', minHeight: '80px' }}>
-                                    {modalTask.description || "Tafsilot yo'q"}
-                                </div>
+                                <div
+                                    className="modal-readonly-value markdown-live-preview description"
+                                    style={{ padding: '10px 14px', background: 'var(--bg-input)', borderRadius: '6px', color: 'var(--text-primary)', minHeight: '80px' }}
+                                    dangerouslySetInnerHTML={renderFormattedText(modalTask.description || "Tafsilot yo'q")}
+                                />
                             </div>
                         </div>
                         <div className="modal-footer" style={{ marginTop: '20px' }}>

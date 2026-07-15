@@ -377,6 +377,44 @@
     word-break: keep-all;
 }
 
+/* Telegram action */
+.telegram-link-action-group {
+    display: inline-flex;
+    gap: 4px;
+    align-items: center;
+    min-width: 0;
+    flex-wrap: nowrap;
+}
+
+.telegram-action-btn {
+    flex: 0 1 auto;
+    min-width: 0;
+    white-space: normal;
+    overflow-wrap: anywhere;
+    line-height: 1.2;
+    text-align: center;
+    padding: 6px 10px;
+    height: auto;
+    min-height: 34px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.telegram-edit-btn {
+    flex: 0 0 26px;
+    width: 10px;
+    min-width: 10px;
+    height: 26px;
+    min-height: 26px;
+    padding: 0;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 999px;
+    font-size: 10px;
+}
+
 /* Tasks Section */
 .row-tasks {
     padding: 16px 20px 20px;
@@ -498,6 +536,19 @@
     color: var(--text-secondary);
     text-transform: uppercase;
     letter-spacing: 0.3px;
+}
+
+.markdown-live-preview {
+    display: block;
+    white-space: pre-wrap;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.6;
+}
+
+.markdown-live-preview a {
+    color: var(--accent-primary);
+    text-decoration: underline;
 }
 
 .modal-dates-grid {
@@ -672,6 +723,17 @@
         max-width: calc(50% - 4px) !important;
     }
 
+    .row-actions .telegram-link-action-group {
+        flex-basis: calc(50% - 4px) !important;
+        max-width: calc(50% - 4px) !important;
+    }
+
+    .row-actions .telegram-action-btn {
+        white-space: normal;
+        overflow-wrap: anywhere;
+        line-height: 1.2;
+    }
+
     .row-actions .btn.btn-primary,
     .row-actions .btn.btn-danger {
         flex-basis: calc(50% - 4px) !important;
@@ -683,7 +745,10 @@
     }
 
     .row-actions .btn.btn-danger {
-        order: 3;
+        flex-basis: 100% !important;
+        max-width: 100% !important;
+        order: 5;
+        margin-top: 4px;
     }
 
     .row-actions .row-chevron {

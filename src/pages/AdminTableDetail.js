@@ -12,7 +12,10 @@ const AdminTableDetail = () => {
     const [loading, setLoading] = useState(true);
     const [expandedRows, setExpandedRows] = useState({});
     const [editingRowIds, setEditingRowIds] = useState({});
+    const [rowNameDrafts, setRowNameDrafts] = useState({});
     const [editingTaskIds, setEditingTaskIds] = useState({});
+    const [editingTelegramLinkRowId, setEditingTelegramLinkRowId] = useState(null);
+    const [telegramLinkDrafts, setTelegramLinkDrafts] = useState({});
     const [toasts, setToasts] = useState([]);
     const isSaving = useRef(false);
 
@@ -23,6 +26,8 @@ const AdminTableDetail = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalTask, setModalTask] = useState(null);
     const [modalRowId, setModalRowId] = useState(null);
+    const [isEditingModalName, setIsEditingModalName] = useState(false);
+    const [isEditingModalDesc, setIsEditingModalDesc] = useState(false);
 
     const [newRoleName, setNewRoleName] = useState('');
     const [showRoleInput, setShowRoleInput] = useState(false);
@@ -208,9 +213,136 @@ const AdminTableDetail = () => {
         return res;
     };
 
+    const renderFormattedText = (text) => {
+        if (!text) return { __html: '' };
+        // Escape HTML
+        let escaped = text
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#39;');
+
+        // 1. Hyperlink [text](URL)
+        escaped = escaped.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank" rel="noopener noreferrer" style="color: var(--accent-primary); text-decoration: underline;">$1</a>');
+        // 2. Bold *text*
+        escaped = escaped.replace(/\*([^*]+)\*/g, '<strong>$1</strong>');
+        // 3. Underline __text__
+        escaped = escaped.replace(/__([^_]+)__/g, '<u>$1</u>');
+        // 4. Italic _text_
+        escaped = escaped.replace(/_([^_]+)_/g, '<em>$1</em>');
+        // 5. Strikethrough ~text~
+        escaped = escaped.replace(/~([^~]+)~/g, '<s>$1</s>');
+        // 6. Newlines
+        escaped = escaped.replace(/\n/g, '<br />');
+
+        return { __html: escaped };
+    };
+
+    const TELEGRAM_LINK_PATTERN = /^\[([^\]]+)\]\((tg:\/\/.+|https:\/\/t\.me\/.+)\)$/;
+    const validateTelegramLinkValue = (value) => {
+        if (typeof value !== 'string') return true;
+        const trimmed = value.trim();
+        if (!trimmed) return true;
+        if (!TELEGRAM_LINK_PATTERN.test(trimmed)) {
+            window.alert("Noto'g'ri Telegram link formati. Namuna: [text](https://t.me/username) yoki [text](tg://resolve?domain=username)");
+            return false;
+        }
+        return true;
+    };
+
+    const validateTelegramPayload = (rowsToValidate) => {
+        for (const row of rowsToValidate || []) {
+            if (!validateTelegramLinkValue(row?.telegramLink)) return false;
+        }
+        return true;
+    };
+
+    const getTelegramButtonLabel = (value) => {
+        if (typeof value !== 'string') return "Telegramga o'tish";
+        const trimmed = value.trim();
+        if (!trimmed) return "Telegramga o'tish";
+        const match = trimmed.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        return match ? match[1] : trimmed;
+    };
+
+    const openTelegramLink = (value) => {
+        if (typeof value !== 'string') return;
+        const trimmed = value.trim();
+        if (!trimmed) {
+            window.alert("Telegram link mavjud emas. Avval matn kiriting.");
+            return;
+        }
+        const match = trimmed.match(/^\[([^\]]+)\]\(([^)]+)\)$/);
+        let url = match?.[2];
+        if (!url || (!url.startsWith('tg://') && !url.startsWith('https://t.me/'))) {
+            window.alert("Noto'g'ri Telegram link formati. Namuna: [text](https://t.me/username)");
+            return;
+        }
+
+        if (url.startsWith('tg://user?id=')) {
+            const userId = url.split('=')[1];
+            url = `tg://openmessage?user_id=${userId}`;
+        }
+
+        if (url.startsWith('https://')) {
+            window.open(url, '_blank', 'noopener,noreferrer');
+        } else {
+            window.location.href = url;
+        }
+    };
+
+    const startEditingTelegramLink = (row) => {
+        const rowKey = row?._id || row?.id;
+        setEditingTelegramLinkRowId(rowKey);
+        setTelegramLinkDrafts(prev => ({ ...prev, [rowKey]: row?.telegramLink || '' }));
+    };
+
+    const cancelEditingTelegramLink = () => {
+        setEditingTelegramLinkRowId(null);
+    };
+
+    const saveTelegramLink = async (row) => {
+        const rowKey = row?._id || row?.id;
+        const nextValue = telegramLinkDrafts[rowKey] ?? row?.telegramLink ?? '';
+        const normalizedValue = typeof nextValue === 'string' ? nextValue.trim() : '';
+        if (!validateTelegramLinkValue(normalizedValue)) return;
+
+        try {
+            const res = await rowsAPI.update(tableId, rowKey, { telegramLink: normalizedValue });
+            if (res.data) setTable(res.data);
+            setTelegramLinkDrafts(prev => ({ ...prev, [rowKey]: normalizedValue }));
+            setEditingTelegramLinkRowId(null);
+            addToast('Telegram link saqlandi', 'success');
+        } catch (error) {
+            const message = error?.response?.data?.message || 'Telegram link saqlanmadi';
+            addToast(message, 'error');
+        }
+    };
+
     // ===============================================
     // LOCAL STATE CHANGES (will trigger isDirty = true)
     // ===============================================
+
+    const startEditingRowName = (row) => {
+        setEditingRowIds(prev => ({ ...prev, [row._id]: true }));
+        setRowNameDrafts(prev => ({ ...prev, [row._id]: row.name || '' }));
+    };
+
+    const cancelEditingRowName = (rowId) => {
+        setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
+        setRowNameDrafts(prev => {
+            const next = { ...prev };
+            delete next[rowId];
+            return next;
+        });
+    };
+
+    const saveEditingRowName = (rowId) => {
+        setEditingRowIds(prev => ({ ...prev, [rowId]: false }));
+        handleRowUpdateLocal(rowId, 'name', rowNameDrafts[rowId] ?? '');
+        handleGlobalSave();
+    };
 
     // Add Row via API
     const handleCreateRowLocal = async () => {
@@ -219,12 +351,13 @@ const AdminTableDetail = () => {
         setCreatingRow(true);
         try {
             const defaultRole = activeRoleFilter !== 'all' ? activeRoleFilter : '';
-            await rowsAPI.create(tableId, {
+            const res = await rowsAPI.create(tableId, {
                 name: '',
                 role: defaultRole,
+                telegramLink: '',
                 tasks: [{ name: '', description: '', startDate: '', endDate: '', delay: '' }]
             });
-            await fetchTable();
+            setTable(res.data);
             addToast('Yangi qator yaratildi', 'success');
         } catch {
             addToast('Qator yaratishda xatolik', 'error');
@@ -274,8 +407,22 @@ const AdminTableDetail = () => {
         isSaving.current = true;
         setCreatingTasks(prev => ({ ...prev, [rowId]: true }));
         try {
-            await tasksAPI.add(tableId, rowId);
-            await fetchTable();
+            const res = await tasksAPI.add(tableId, rowId);
+            const newTask = res?.data?.task || res?.data;
+
+            setTable(prev => ({
+                ...prev,
+                rows: prev.rows.map(row => {
+                    if (row._id === rowId) {
+                        return {
+                            ...row,
+                            tasks: [...(row.tasks || []), newTask]
+                        };
+                    }
+                    return row;
+                })
+            }));
+
             addToast('Vazifa qo\'shildi', 'success');
         } catch {
             addToast('Xatolik', 'error');
@@ -338,6 +485,8 @@ const AdminTableDetail = () => {
         setModalTask({ ...task });
         setModalRowId(rowId);
         setModalOpen(true);
+        setIsEditingModalName(false);
+        setIsEditingModalDesc(false);
     };
 
     // GLOBAL SAVE helper
@@ -346,6 +495,10 @@ const AdminTableDetail = () => {
         isSaving.current = true;
         try {
             const currentRows = rowsOverride || table.rows;
+            if (!validateTelegramPayload(currentRows)) {
+                isSaving.current = false;
+                return;
+            }
             const oldIds = currentRows.map(r => r._id);
 
             const rowsToSave = currentRows.map(row => {
@@ -390,6 +543,8 @@ const AdminTableDetail = () => {
 
     const handleModalClose = () => {
         setModalOpen(false);
+        setIsEditingModalName(false);
+        setIsEditingModalDesc(false);
         const newRows = table.rows.map(row => {
             if (row._id === modalRowId) {
                 return {
@@ -492,14 +647,6 @@ const AdminTableDetail = () => {
                     Orqaga
                 </button>
                 <div className="detail-header-right">
-                    <button className="btn btn-sm btn-secondary" onClick={fetchTable}>
-                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                            <polyline points="23 4 23 10 17 10" />
-                            <polyline points="1 20 1 14 7 14" />
-                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
-                        </svg>
-                        Yangilash
-                    </button>
                     <button className="btn btn-sm btn-secondary" onClick={handleRegenerateId}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="23 4 23 10 17 10" />
@@ -514,6 +661,14 @@ const AdminTableDetail = () => {
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                         </svg>
                         Nusxalash
+                    </button>
+                    <button className="btn btn-sm btn-secondary" onClick={fetchTable}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        Yangilash
                     </button>
                 </div>
             </div>
@@ -586,29 +741,23 @@ const AdminTableDetail = () => {
                                                 <div className="row-name-control" style={{ display: 'flex', gap: '6px', flex: 1 }} onClick={(e) => e.stopPropagation()}>
                                                     <input
                                                         className="input"
-                                                        value={row.name}
+                                                        value={rowNameDrafts[row._id] ?? row.name ?? ''}
                                                         style={{ flex: 1 }}
-                                                        onChange={(e) => handleRowUpdateLocal(row._id, 'name', e.target.value)}
+                                                        onChange={(e) => setRowNameDrafts(prev => ({ ...prev, [row._id]: e.target.value }))}
                                                         placeholder="Ism / Nomi"
                                                         autoFocus
-                                                        onKeyDown={(e) => e.key === 'Enter' && setEditingRowIds(prev => ({ ...prev, [row._id]: false }))}
+                                                        onKeyDown={(e) => e.key === 'Enter' && saveEditingRowName(row._id)}
                                                     />
                                                     <button
                                                         className="btn btn-sm btn-secondary"
-                                                        onClick={() => {
-                                                            setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
-                                                            fetchTable();
-                                                        }}
+                                                        onClick={() => cancelEditingRowName(row._id)}
                                                         title="Bekor qilish"
                                                     >
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
                                                     </button>
                                                     <button
                                                         className="btn btn-sm btn-success"
-                                                        onClick={() => {
-                                                            setEditingRowIds(prev => ({ ...prev, [row._id]: false }));
-                                                            handleGlobalSave();
-                                                        }}
+                                                        onClick={() => saveEditingRowName(row._id)}
                                                         title="Tahrirni saqlash"
                                                     >
                                                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="20 6 9 17 4 12"></polyline></svg>
@@ -648,10 +797,49 @@ const AdminTableDetail = () => {
                                             </select>
                                         )}
                                         {!editingRowIds[row._id] && (
-                                            <button className="btn btn-sm btn-secondary edit-row-btn" onClick={() => setEditingRowIds(prev => ({ ...prev, [row._id]: true }))} title="Ismni tahrirlash">
+                                            <button className="btn btn-sm btn-secondary edit-row-btn" onClick={() => startEditingRowName(row)} title="Ismni tahrirlash">
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                                                 Tahrirlash
                                             </button>
+                                        )}
+                                        {editingTelegramLinkRowId === (row?._id || row?.id) ? (
+                                            <div className="telegram-link-editor" style={{ display: 'flex', gap: '6px', alignItems: 'center' }} onClick={(e) => e.stopPropagation()}>
+                                                <input
+                                                    className="input"
+                                                    type="text"
+                                                    value={telegramLinkDrafts[row?._id || row?.id] ?? ''}
+                                                    onChange={(e) => setTelegramLinkDrafts(prev => ({ ...prev, [row?._id || row?.id]: e.target.value }))}
+                                                    placeholder="[text](tg://user?id=USER_ID)"
+                                                    style={{ minWidth: '220px' }}
+                                                />
+                                                <button className="btn btn-sm btn-success" onClick={() => saveTelegramLink(row)} title="Saqlash">✓</button>
+                                                <button className="btn btn-sm btn-ghost" onClick={cancelEditingTelegramLink} title="Bekor qilish">✕</button>
+                                            </div>
+                                        ) : (
+                                            <div className="telegram-link-action-group">
+                                                <button
+                                                    className="btn btn-sm btn-secondary telegram-action-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        if (row.telegramLink && row.telegramLink.trim()) {
+                                                            openTelegramLink(row.telegramLink);
+                                                        }
+                                                    }}
+                                                    title="Telegram link"
+                                                >
+                                                    {getTelegramButtonLabel(row.telegramLink)}
+                                                </button>
+                                                <button
+                                                    className="btn btn-sm btn-ghost telegram-edit-btn"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        startEditingTelegramLink(row);
+                                                    }}
+                                                    title="Telegram linkni tahrirlash"
+                                                >
+                                                    ✎
+                                                </button>
+                                            </div>
                                         )}
                                         <button className="btn btn-sm btn-primary" onClick={() => handleAddTaskLocal(row._id)} disabled={creatingTasks[row._id]}>
                                             {creatingTasks[row._id] ? <SpinnerIcon /> : "Vazifa qo'shish"}
@@ -830,22 +1018,45 @@ const AdminTableDetail = () => {
                         <div className="modal-body">
                             <div className="modal-field">
                                 <label>Vazifa nomi</label>
-                                <input
-                                    type="text"
-                                    className="input"
-                                    placeholder="Vazifa nomini kiriting..."
-                                    value={modalTask.name}
-                                    onChange={(e) => setModalTask({ ...modalTask, name: e.target.value })}
-                                />
+                                {isEditingModalName ? (
+                                    <input
+                                        type="text"
+                                        className="input"
+                                        placeholder="Vazifa nomini kiriting..."
+                                        value={modalTask.name}
+                                        onChange={(e) => setModalTask({ ...modalTask, name: e.target.value })}
+                                        onBlur={() => setIsEditingModalName(false)}
+                                        autoFocus
+                                    />
+                                ) : (
+                                    <div
+                                        className="input markdown-live-preview"
+                                        onClick={() => setIsEditingModalName(true)}
+                                        dangerouslySetInnerHTML={renderFormattedText(modalTask.name || "Vazifa nomini kiriting...")}
+                                        style={{ cursor: 'text', minHeight: '38px' }}
+                                    />
+                                )}
                             </div>
-                            <div className="modal-field">
+                            <div className="modal-field" style={{ marginTop: '16px' }}>
                                 <label>Tafsilot (Text)</label>
-                                <textarea
-                                    className="input textarea"
-                                    placeholder="Vazifa tafsilotini kiriting..."
-                                    value={modalTask.description}
-                                    onChange={(e) => setModalTask({ ...modalTask, description: e.target.value })}
-                                />
+                                {isEditingModalDesc ? (
+                                    <textarea
+                                        className="input textarea"
+                                        placeholder="Vazifa tafsilotini kiriting..."
+                                        value={modalTask.description}
+                                        onChange={(e) => setModalTask({ ...modalTask, description: e.target.value })}
+                                        onBlur={() => setIsEditingModalDesc(false)}
+                                        style={{ minHeight: '120px' }}
+                                        autoFocus
+                                    />
+                                ) : (
+                                    <div
+                                        className="input textarea markdown-live-preview"
+                                        onClick={() => setIsEditingModalDesc(true)}
+                                        dangerouslySetInnerHTML={renderFormattedText(modalTask.description || "Vazifa tafsilotini kiriting...")}
+                                        style={{ cursor: 'text', minHeight: '120px' }}
+                                    />
+                                )}
                             </div>
                         </div>
                         <div className="modal-footer">
