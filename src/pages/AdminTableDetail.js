@@ -640,7 +640,7 @@ const AdminTableDetail = () => {
             </div>
 
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '8px' }}>
-                <button className="btn btn-ghost" onClick={() => navigate('/admin/tables')}>
+                <button className="btn btn-ghost" onClick={() => navigate('/admin/tables')} style={{ marginTop: "5px" }}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="19" y1="12" x2="5" y2="12" />
                         <polyline points="12 19 5 12 12 5" />
