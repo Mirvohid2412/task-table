@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { publicAPI } from '../services/api';
 import './PublicTableView.css'; // Mapped to AdminTableDetail.css visually
@@ -27,7 +27,7 @@ const PublicTableView = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalTask, setModalTask] = useState(null);
 
-    const loadTable = async () => {
+    const loadTable = useCallback(async () => {
         if (!tableId) {
             setError(true);
             setLoading(false);
@@ -43,11 +43,11 @@ const PublicTableView = () => {
         } finally {
             setLoading(false);
         }
-    };
+    }, [tableId]);
 
     useEffect(() => {
         loadTable();
-    }, [tableId, loadTable]);
+    }, [loadTable]);
 
     const toggleRow = (rowId) => {
         setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
