@@ -111,10 +111,11 @@ const AdminTableDetail = () => {
     const handleCopyTableId = async () => {
         if (!tableId) return;
         try {
-            await navigator.clipboard.writeText(tableId);
-            addToast('ID nusxalandi', 'success');
+            const publicUrl = `${window.location.origin}/tasks?id=${tableId}`;
+            await navigator.clipboard.writeText(publicUrl);
+            addToast('URL nusxalandi', 'success');
         } catch {
-            addToast('ID nusxalab bo\'lmadi', 'error');
+            addToast('URL nusxalab bo\'lmadi', 'error');
         }
     };
 
@@ -638,7 +639,7 @@ const AdminTableDetail = () => {
                 ))}
             </div>
 
-            <div className="detail-header">
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: '8px' }}>
                 <button className="btn btn-ghost" onClick={() => navigate('/admin/tables')}>
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                         <line x1="19" y1="12" x2="5" y2="12" />
@@ -646,6 +647,8 @@ const AdminTableDetail = () => {
                     </svg>
                     Orqaga
                 </button>
+            </div>
+            <div className="detail-header">
                 <div className="detail-header-right">
                     <button className="btn btn-sm btn-secondary" onClick={handleRegenerateId}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -655,7 +658,7 @@ const AdminTableDetail = () => {
                         </svg>
                         Yangi ID yaratish
                     </button>
-                    <button className="btn btn-sm btn-secondary" onClick={handleCopyTableId} title="ID nusxalash">
+                    <button className="btn btn-sm btn-secondary" onClick={handleCopyTableId} title="URL nusxalash">
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
@@ -830,7 +833,7 @@ const AdminTableDetail = () => {
                                                     {getTelegramButtonLabel(row.telegramLink)}
                                                 </button>
                                                 <button
-                                                    className="btn btn-sm btn-ghost telegram-edit-btn"
+                                                    className="btn-ghost telegram-edit-btn"
                                                     onClick={(e) => {
                                                         e.stopPropagation();
                                                         startEditingTelegramLink(row);

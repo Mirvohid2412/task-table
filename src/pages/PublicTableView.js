@@ -261,39 +261,40 @@ const PublicTableView = () => {
                         {group.rows.map((row, rowIndex) => (
                             <div key={row._id} className="row-card" style={{ animationDelay: `${(groupIndex + rowIndex) * 0.03}s` }}>
 
-                                <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexWrap: 'nowrap', gap: '10px', cursor: 'pointer' }}>
-                                    <div className="row-text-content" style={{ display: 'flex', flexDirection: 'column', gap: '4px', flex: 1, minWidth: 0 }}>
-                                        <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
-                                            <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
-                                                {renderNameText(row.name, row.hideName)}
-                                            </span>
-                                        </div>
-                                        {row.role && (
-                                            <div className="row-role-pill" style={{ alignSelf: 'flex-start' }}>
-                                                Rol: <b>{row.role}</b>
-                                            </div>
-                                        )}
-                                        {row.telegramLink && row.telegramLink.trim() && (
-                                            <button
-                                                className="btn btn-sm btn-secondary"
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    openTelegramLink(row.telegramLink);
-                                                }}
-                                                title="Telegram link"
-                                                style={{ alignSelf: 'flex-start', marginTop: '4px' }}
-                                            >
-                                                {getTelegramButtonLabel(row.telegramLink)}
-                                            </button>
-                                        )}
+                                <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexDirection: 'column', alignItems: 'stretch', gap: '8px', cursor: 'pointer' }}>
+                                    <div style={{ display: 'flex', gap: '8px', alignItems: 'center', minWidth: 0 }}>
+                                        <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
+                                            {renderNameText(row.name, row.hideName)}
+                                        </span>
                                     </div>
-                                    <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px', flexShrink: 0 }}>
-                                        <svg
-                                            width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                            style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
-                                        >
-                                            <polyline points="6 9 12 15 18 9" />
-                                        </svg>
+                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px', flexWrap: 'wrap', flex: 1 }}>
+                                            {row.role && (
+                                                <div className="row-role-pill">
+                                                    Rol: <b>{row.role}</b>
+                                                </div>
+                                            )}
+                                            {row.telegramLink && row.telegramLink.trim() && (
+                                                <button
+                                                    className="btn btn-sm btn-secondary"
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        openTelegramLink(row.telegramLink);
+                                                    }}
+                                                    title="Telegram link"
+                                                >
+                                                    {getTelegramButtonLabel(row.telegramLink)}
+                                                </button>
+                                            )}
+                                        </div>
+                                        <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px', flexShrink: 0 }}>
+                                            <svg
+                                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                                style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
+                                            >
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </div>
                                     </div>
                                 </div>
 

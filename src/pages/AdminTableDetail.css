@@ -24,6 +24,11 @@
     gap: 12px;
 }
 
+.detail-header .btn-ghost {
+    margin-right: auto;
+    margin-left: 0;
+}
+
 .detail-header-right {
     display: flex;
     gap: 8px;
@@ -402,17 +407,20 @@
 }
 
 .telegram-edit-btn {
-    flex: 0 0 26px;
-    width: 10px;
-    min-width: 10px;
-    height: 26px;
-    min-height: 26px;
-    padding: 0;
+    flex: 0 0 18px;
+    width: 6px;
+    min-width: 6px;
+    height: 18px;
+    min-height: 18px;
+    padding: 10px 15px;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     border-radius: 999px;
-    font-size: 10px;
+    font-size: 14px;
+    line-height: 1;
+    box-sizing: border-box;
+    border: none;
 }
 
 /* Tasks Section */
@@ -601,8 +609,8 @@
     .task-col,
     .task-col-actions,
     .task-col-num,
-    .task-row > div,
-    .task-row > div > * {
+    .task-row>div,
+    .task-row>div>* {
         width: 100% !important;
         min-width: 0 !important;
     }
@@ -622,27 +630,21 @@
     }
 
     .detail-header {
-        display: flex;
-        flex-direction: column;
-        align-items: flex-start;
-        justify-content: flex-start;
-        text-align: left;
-        gap: 8px;
+        display: block;
         margin-bottom: 16px;
     }
 
-    .detail-header > .btn-ghost {
-        margin-top: 6px;
-        align-self: flex-start;
-        order: 1;
+    .detail-header>.btn-ghost {
+        display: inline-flex;
+        margin: 0 0 12px 0;
     }
 
     .detail-header-right {
-        width: 100%;
+        display: flex;
+        flex-wrap: wrap;
         justify-content: flex-start;
-        margin-top: 2px;
         gap: 6px;
-        order: 2;
+        width: 100%;
     }
 
     .detail-header-right .btn {
@@ -753,10 +755,12 @@
 
     .row-actions .row-chevron {
         order: 4;
-        margin-left: auto;
-        flex-basis: 100%;
-        display: flex;
-        justify-content: flex-end;
+        margin-left: 0 !important;
+        margin-right: auto !important;
+        flex-basis: auto !important;
+        display: flex !important;
+        justify-content: flex-start !important;
+        align-self: flex-start !important;
     }
 
     .row-actions .btn:last-child {
@@ -764,7 +768,9 @@
     }
 
     .row-chevron {
-        margin-left: auto;
+        margin-left: 0 !important;
+        margin-right: auto !important;
+        align-self: flex-start !important;
     }
 
     .roles-bar {
