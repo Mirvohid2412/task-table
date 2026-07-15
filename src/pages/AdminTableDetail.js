@@ -32,6 +32,7 @@ const AdminTableDetail = () => {
     const [deletingRowIds, setDeletingRowIds] = useState({});
     const [creatingTasks, setCreatingTasks] = useState({});
     const [deletingTaskIds, setDeletingTaskIds] = useState({});
+    const [togglingNameVisibility, setTogglingNameVisibility] = useState({});
 
     const SpinnerIcon = () => (
         <svg className="loading-spin" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -62,6 +63,7 @@ const AdminTableDetail = () => {
     }, []);
 
     const fetchTable = useCallback(async () => {
+        setLoading(true);
         try {
             const res = await tablesAPI.getById(tableId);
             setTable(res.data);
@@ -115,15 +117,52 @@ const AdminTableDetail = () => {
         }
     };
 
-    const handleDeleteRole = async (index) => {
+    const handleDeleteRole = (index) => {
+        const roleName = table?.roles?.[index] || 'this role';
+        setConfirmAction({
+            message: `Rostdan ham "${roleName}" rolini o'chirmoqchimisiz?`,
+            onConfirm: async () => {
+                setConfirmAction(null);
+                try {
+                    const res = await rolesAPI.delete(tableId, index);
+                    setTable(res.data);
+                    setActiveRoleFilter('all');
+                    addToast('Rol o\'chirildi', 'success');
+                } catch {
+                    addToast('Xatolik', 'error');
+                }
+            }
+        });
+    };
+
+    const handleToggleHideNameForRow = async (rowId) => {
+        const row = table?.rows?.find(r => r._id === rowId);
+        if (!row) return;
+        const nextValue = !Boolean(row.hideName);
+        setTogglingNameVisibility(prev => ({ ...prev, [rowId]: true }));
         try {
-            const res = await rolesAPI.delete(tableId, index);
+            const res = await rowsAPI.update(tableId, rowId, { hideName: nextValue });
             setTable(res.data);
-            setActiveRoleFilter('all');
-            addToast('Rol o\'chirildi', 'success');
+            addToast(nextValue ? 'Ism yashirildi' : 'Ism ko\'rsatildi', 'success');
         } catch {
-            addToast('Xatolik', 'error');
+            addToast('Sozlashda xatolik', 'error');
+        } finally {
+            setTogglingNameVisibility(prev => ({ ...prev, [rowId]: false }));
         }
+    };
+
+    const maskName = (name) => {
+        if (!name) return 'Ism / Nomi (kiritilmagan)';
+        const words = name.trim().split(/\s+/);
+        return words.map(word => {
+            if (word.length <= 2) {
+                return '*'.repeat(word.length);
+            }
+            const prefix = word.slice(0, 2);
+            const suffix = word.slice(-2);
+            const middle = '*'.repeat(Math.max(1, word.length - 4));
+            return `${prefix}${middle}${suffix}`;
+        }).join(' ');
     };
 
     // Masking function for "DD.MM.YYYY HH:MM"
@@ -385,6 +424,14 @@ const AdminTableDetail = () => {
                     Orqaga
                 </button>
                 <div className="detail-header-right">
+                    <button className="btn btn-sm btn-secondary" onClick={fetchTable}>
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <polyline points="23 4 23 10 17 10" />
+                            <polyline points="1 20 1 14 7 14" />
+                            <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                        </svg>
+                        Yangilash
+                    </button>
                     <button className="btn btn-sm btn-secondary" onClick={handleRegenerateId}>
                         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                             <polyline points="23 4 23 10 17 10" />
@@ -487,8 +534,17 @@ const AdminTableDetail = () => {
                                 ) : (
                                     <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                                         <span style={{ fontWeight: 600, fontSize: '15px' }}>
-                                            {row.name || 'Ism / Nomi (kiritilmagan)'}
+                                            {row.hideName ? maskName(row.name) : (row.name || 'Ism / Nomi (kiritilmagan)')}
                                         </span>
+                                        <button
+                                            className={`btn btn-sm ${row.hideName ? 'btn-danger' : 'btn-primary'}`}
+                                            onClick={(e) => { e.stopPropagation(); handleToggleHideNameForRow(row._id); }}
+                                            title={row.hideName ? 'Ismni ko\'rsatish' : 'Ismni yashirish'}
+                                            style={{ padding: '4px 10px', fontSize: '12px', minWidth: '92px', fontWeight: 700, display: 'inline-flex', alignItems: 'center', justifyContent: 'center' }}
+                                            disabled={togglingNameVisibility[row._id]}
+                                        >
+                                            {togglingNameVisibility[row._id] ? <SpinnerIcon /> : (row.hideName ? 'Ko\'rsatish' : 'Yashirish')}
+                                        </button>
                                     </div>
                                 )}
 

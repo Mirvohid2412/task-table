@@ -27,27 +27,27 @@ const PublicTableView = () => {
     const [modalOpen, setModalOpen] = useState(false);
     const [modalTask, setModalTask] = useState(null);
 
+    const loadTable = async () => {
+        if (!tableId) {
+            setError(true);
+            setLoading(false);
+            return;
+        }
+        setLoading(true);
+        setError(false);
+        try {
+            const res = await publicAPI.getById(tableId);
+            setTable(res.data);
+        } catch {
+            setError(true);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     useEffect(() => {
-        const loadTable = async () => {
-            if (!tableId) {
-                setError(true);
-                setLoading(false);
-                return;
-            }
-            try {
-                const res = await publicAPI.getById(tableId);
-                setTable(res.data);
-                if (res.data.roles?.length > 0 && !searchParams.has('role')) {
-                    // Do nothing, let it default to 'all' in the constant
-                }
-            } catch {
-                setError(true);
-            } finally {
-                setLoading(false);
-            }
-        };
         loadTable();
-    }, [tableId, searchParams]);
+    }, [tableId]);
 
     const toggleRow = (rowId) => {
         setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
@@ -56,6 +56,20 @@ const PublicTableView = () => {
     const openTaskModal = (task) => {
         setModalTask(task);
         setModalOpen(true);
+    };
+
+    const maskName = (name) => {
+        if (!name) return 'Ism / Nomi (kiritilmagan)';
+        const words = name.trim().split(/\s+/);
+        return words.map(word => {
+            if (word.length <= 2) {
+                return '*'.repeat(word.length);
+            }
+            const prefix = word.slice(0, 2);
+            const suffix = word.slice(-2);
+            const middle = '*'.repeat(Math.max(1, word.length - 4));
+            return `${prefix}${middle}${suffix}`;
+        }).join(' ');
     };
 
     const filteredRows = table?.rows?.filter(row => {
@@ -88,10 +102,16 @@ const PublicTableView = () => {
     return (
         <div className="page-container detail-page" style={{ paddingTop: '20px' }}>
 
-            <div className="detail-header" style={{ justifyContent: 'center' }}>
-                <div className="detail-header-right">
-                    <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px' }}>{table.name}</h1>
-                </div>
+            <div className="detail-header" style={{ justifyContent: 'space-between' }}>
+                <h1 style={{ margin: 0, color: 'var(--text-primary)', fontSize: '24px' }}>{table.name}</h1>
+                <button className="btn btn-sm btn-secondary" onClick={loadTable}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                        <polyline points="23 4 23 10 17 10" />
+                        <polyline points="1 20 1 14 7 14" />
+                        <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+                    </svg>
+                    Yangilash
+                </button>
             </div>
 
             {table.roles && table.roles.length > 0 && (
@@ -125,7 +145,7 @@ const PublicTableView = () => {
                             <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
                                 <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center' }}>
                                     <span style={{ fontWeight: 600, fontSize: '15px', display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                        {row.name || 'Ism / Nomi (kiritilmagan)'}
+                                        {row.hideName ? maskName(row.name) : (row.name || 'Ism / Nomi (kiritilmagan)')}
                                     </span>
                                 </div>
                                 {row.role && (
@@ -164,8 +184,8 @@ const PublicTableView = () => {
 
                                                 <div style={{ flex: 2, minWidth: '120px' }}>
                                                     <button
-                                                        className="btn btn-sm btn-secondary"
-                                                        style={{ width: '100%', wordBreak: 'break-all', textAlign: 'left', pointerEvents: 'none' }}
+                                                        className="btn btn-sm btn-primary"
+                                                        style={{ width: '100%', wordBreak: 'break-all', textAlign: 'left', pointerEvents: 'none', border: '1px solid rgba(108, 92, 231, 0.35)', fontWeight: 700 }}
                                                     >
                                                         Vazifani ko'rish uchun bosing
                                                     </button>

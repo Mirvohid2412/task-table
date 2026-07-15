@@ -137,12 +137,10 @@ body {
 .btn-danger {
   background: linear-gradient(135deg, var(--accent-danger), #e55555);
   color: #fff;
-  box-shadow: 0 4px 15px rgba(255, 107, 107, 0.2);
 }
 
 .btn-danger:hover {
   background: linear-gradient(135deg, var(--accent-danger-hover), #e54040);
-  box-shadow: 0 6px 20px rgba(255, 107, 107, 0.3);
   transform: translateY(-1px);
 }
 

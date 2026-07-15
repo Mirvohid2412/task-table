@@ -1,6 +1,7 @@
 import axios from 'axios';
 
-const API_URL = "https://task-table-backend.onrender.com/api";
+// const API_URL = "https://task-table-backend.onrender.com/api";
+const API_URL = "http://localhost:5000/api";
 
 const api = axios.create({
     baseURL: API_URL,
@@ -29,6 +30,7 @@ export const tablesAPI = {
     delete: (tableId) => api.delete(`/tables/${tableId}`),
     regenerateId: (tableId) => api.patch(`/tables/${tableId}/regenerate`),
     updateName: (tableId, name) => api.patch(`/tables/${tableId}/name`, { name }),
+    updateHideNames: (tableId, hideNames) => api.patch(`/tables/${tableId}/hide-names`, { hideNames }),
     updateData: (tableId, rows) => api.put(`/tables/${tableId}`, { rows }),
 };
 

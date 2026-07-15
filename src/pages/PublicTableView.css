@@ -398,6 +398,11 @@
 }
 
 @media (max-width: 768px) {
+    .detail-header {
+        justify-content: center;
+        text-align: center;
+    }
+
     .row-header {
         flex-direction: column;
         align-items: stretch;
