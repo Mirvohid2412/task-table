@@ -302,9 +302,9 @@
 }
 
 .compact-select {
-    width: 100% !important;
+    width: auto !important;
     max-width: 140px !important;
-    min-width: 0 !important;
+    min-width: 100px !important;
     flex: 0 0 auto !important;
     padding: 0 10px !important;
     font-size: 13px !important;
@@ -314,17 +314,28 @@
     display: flex;
     gap: 8px;
     flex-shrink: 0;
-    align-items: stretch;
+    align-items: center;
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
 
 .row-actions .btn {
     height: 38px;
     min-width: 0;
     max-width: 100%;
-    white-space: normal;
-    word-break: break-word;
+    white-space: nowrap;
+    word-break: normal;
     line-height: 1.2;
+}
+
+.row-actions .btn.btn-secondary[title="Ismni tahrirlash"] {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.edit-row-btn {
+    order: -1;
 }
 
 .row-chevron {
@@ -638,12 +649,49 @@
         gap: 8px;
         justify-content: flex-start;
         flex-wrap: wrap;
+        align-items: stretch;
     }
 
-    .row-actions .btn {
+    .row-actions .btn,
+    .row-actions .compact-select {
         flex: 1 1 calc(50% - 4px);
         min-width: 0;
+        width: auto;
+        max-width: 100%;
         font-size: 12px;
+        white-space: nowrap;
+    }
+
+    .row-actions .compact-select {
+        flex-basis: calc(50% - 4px) !important;
+        max-width: calc(50% - 4px) !important;
+    }
+
+    .row-actions .edit-row-btn {
+        flex-basis: calc(50% - 4px) !important;
+        max-width: calc(50% - 4px) !important;
+    }
+
+    .row-actions .btn.btn-primary,
+    .row-actions .btn.btn-danger {
+        flex-basis: calc(50% - 4px) !important;
+        max-width: calc(50% - 4px) !important;
+    }
+
+    .row-actions .btn.btn-primary {
+        order: 2;
+    }
+
+    .row-actions .btn.btn-danger {
+        order: 3;
+    }
+
+    .row-actions .row-chevron {
+        order: 4;
+        margin-left: auto;
+        flex-basis: 100%;
+        display: flex;
+        justify-content: flex-end;
     }
 
     .row-actions .btn:last-child {

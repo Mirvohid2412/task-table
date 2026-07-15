@@ -103,6 +103,16 @@ const AdminTableDetail = () => {
         }
     };
 
+    const handleCopyTableId = async () => {
+        if (!tableId) return;
+        try {
+            await navigator.clipboard.writeText(tableId);
+            addToast('ID nusxalandi', 'success');
+        } catch {
+            addToast('ID nusxalab bo\'lmadi', 'error');
+        }
+    };
+
     // Roles
     const handleAddRole = async () => {
         if (!newRoleName.trim()) return;
@@ -498,6 +508,13 @@ const AdminTableDetail = () => {
                         </svg>
                         Yangi ID yaratish
                     </button>
+                    <button className="btn btn-sm btn-secondary" onClick={handleCopyTableId} title="ID nusxalash">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                        </svg>
+                        Nusxalash
+                    </button>
                 </div>
             </div>
 
@@ -614,24 +631,24 @@ const AdminTableDetail = () => {
                                                 </div>
                                             )}
 
-                                            {table.roles && table.roles.length > 0 && (
-                                                <select
-                                                    className="input compact-select"
-                                                    style={{ width: 'auto', minWidth: '0' }}
-                                                    value={row.role || ''}
-                                                    onChange={(e) => handleRowRoleSelect(row._id, e.target.value)}
-                                                    onClick={(e) => e.stopPropagation()}
-                                                >
-                                                    <option value="">Rol tanlang...</option>
-                                                    {table.roles.map(r => <option key={r} value={r}>{r}</option>)}
-                                                </select>
-                                            )}
                                         </div>
                                     </div>
 
                                     <div className="row-actions" onClick={(e) => e.stopPropagation()}>
+                                        {table.roles && table.roles.length > 0 && (
+                                            <select
+                                                className="input compact-select"
+                                                style={{ width: 'auto', minWidth: '0' }}
+                                                value={row.role || ''}
+                                                onChange={(e) => handleRowRoleSelect(row._id, e.target.value)}
+                                                onClick={(e) => e.stopPropagation()}
+                                            >
+                                                <option value="">Rol tanlang...</option>
+                                                {table.roles.map(r => <option key={r} value={r}>{r}</option>)}
+                                            </select>
+                                        )}
                                         {!editingRowIds[row._id] && (
-                                            <button className="btn btn-sm btn-secondary" onClick={() => setEditingRowIds(prev => ({ ...prev, [row._id]: true }))} title="Ismni tahrirlash">
+                                            <button className="btn btn-sm btn-secondary edit-row-btn" onClick={() => setEditingRowIds(prev => ({ ...prev, [row._id]: true }))} title="Ismni tahrirlash">
                                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg>
                                                 Tahrirlash
                                             </button>
