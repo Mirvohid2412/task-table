@@ -90,16 +90,51 @@ const PublicTableView = () => {
         ));
     };
 
-    const filteredRows = (table?.rows || [])
-        .filter(row => {
-            if (activeRoleFilter === 'all') return true;
-            return row.role === activeRoleFilter;
-        })
-        .sort((a, b) => {
-            const nameA = (a.name || '').toString().trim().toLowerCase();
-            const nameB = (b.name || '').toString().trim().toLowerCase();
-            return nameA.localeCompare(nameB, 'uz', { sensitivity: 'base' });
-        });
+    const sortByName = (a, b) => {
+        const nameA = (a.name || '').toString().trim().toLowerCase();
+        const nameB = (b.name || '').toString().trim().toLowerCase();
+        return nameA.localeCompare(nameB, 'uz', { sensitivity: 'base' });
+    };
+
+    const sortedRoles = (table?.roles || [])
+        .filter(role => role && role.toString().trim())
+        .slice()
+        .sort((a, b) => a.localeCompare(b, 'uz', { sensitivity: 'base' }));
+
+    const groupedRowsByRole = (() => {
+        const allRows = (table?.rows || []).slice();
+
+        if (activeRoleFilter !== 'all') {
+            return [{
+                role: activeRoleFilter,
+                rows: allRows
+                    .filter(row => row.role === activeRoleFilter)
+                    .sort(sortByName)
+            }];
+        }
+
+        const groups = sortedRoles.map(role => ({
+            role,
+            rows: allRows
+                .filter(row => (row.role || '').toString().trim() === role)
+                .sort(sortByName)
+        })).filter(group => group.rows.length > 0);
+
+        const unassignedRows = allRows
+            .filter(row => {
+                const value = (row.role || '').toString().trim();
+                return !sortedRoles.includes(value);
+            })
+            .sort(sortByName);
+
+        if (unassignedRows.length > 0) {
+            groups.push({ role: 'Rolsiz', rows: unassignedRows });
+        }
+
+        return groups;
+    })();
+
+    const totalVisibleRows = groupedRowsByRole.reduce((count, group) => count + group.rows.length, 0);
 
     if (loading) {
         return (
@@ -147,8 +182,8 @@ const PublicTableView = () => {
                         >
                             Hammasi
                         </span>
-                        {table.roles.map((role, index) => (
-                            <div key={index} className="role-item">
+                        {sortedRoles.map((role, index) => (
+                            <div key={`${role}-${index}`} className="role-item">
                                 <span
                                     className={`badge badge-role ${activeRoleFilter === role ? 'active' : ''}`}
                                     onClick={() => setActiveRoleFilter(role)}
@@ -162,90 +197,99 @@ const PublicTableView = () => {
             )}
 
             <div className="rows-container">
-                {filteredRows.map((row, index) => (
-                    <div key={row._id} className="row-card" style={{ animationDelay: `${index * 0.03}s` }}>
-
-                        <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
-                            <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
-                                <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', minWidth: 0 }}>
-                                    <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
-                                        {renderNameText(row.name, row.hideName)}
-                                    </span>
-                                </div>
-                                {row.role && (
-                                    <div className="row-role-pill">
-                                        Rol: <b>{row.role}</b>
-                                    </div>
-                                )}
-                                <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginLeft: 'auto' }}>
-                                    <svg
-                                        width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
-                                        style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
-                                    >
-                                        <polyline points="6 9 12 15 18 9" />
-                                    </svg>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* Expanded Tasks */}
-                        {expandedRows[row._id] === true && (
-                            <div className="row-tasks">
-                                {row.tasks?.length === 0 ? (
-                                    <div className="no-tasks">Vazifalar yo'q</div>
-                                ) : (
-                                    <div className="tasks-table">
-                                        <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, alignItems: 'center' }}>
-                                            <div style={{ width: '36px', flexShrink: 0 }}>#</div>
-                                            <div style={{ flex: 2, minWidth: '120px' }}>Vazifa</div>
-                                            <div style={{ flex: 1, minWidth: '100px' }}>Boshlanish</div>
-                                            <div style={{ flex: 1, minWidth: '100px' }}>Tugash</div>
-                                            <div style={{ flex: 1, minWidth: '100px' }}>Istisno kechiktirish</div>
-                                        </div>
-                                        {row.tasks.map((task, tIndex) => (
-                                            <div key={task._id} className="task-row" onClick={() => openTaskModal(task)} style={{ cursor: 'pointer', display: 'flex', gap: '8px', padding: '8px 12px', alignItems: 'center' }}>
-                                                <div style={{ width: '36px', flexShrink: 0, fontWeight: 600, color: 'var(--accent-primary)' }}>{tIndex + 1}</div>
-
-                                                <div style={{ flex: 2, minWidth: '120px' }}>
-                                                    <button
-                                                        className="btn btn-sm btn-primary"
-                                                        style={{ width: '100%', wordBreak: 'break-all', textAlign: 'left', pointerEvents: 'none', border: '1px solid rgba(108, 92, 231, 0.35)', fontWeight: 700 }}
-                                                    >
-                                                        Vazifani ko'rish uchun bosing
-                                                    </button>
-                                                </div>
-
-                                                <div style={{ flex: 1, minWidth: '100px' }}>
-                                                    <label className="mobile-label">Boshlanish</label>
-                                                    <div className="input" style={{ display: 'flex', alignItems: 'center' }}>
-                                                        {task.startDate || '-'}
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ flex: 1, minWidth: '100px' }}>
-                                                    <label className="mobile-label">Tugash</label>
-                                                    <div className="input" style={{ display: 'flex', alignItems: 'center' }}>
-                                                        {task.endDate || '-'}
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ flex: 1, minWidth: '100px' }}>
-                                                    <label className="mobile-label">Istisno kechiktirish</label>
-                                                    <div className="input" style={{ display: 'flex', alignItems: 'center', color: task.delay ? 'var(--accent-warning)' : 'var(--text-muted)' }}>
-                                                        {task.delay || 'Kechiktirish yo\'q'}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
+                {groupedRowsByRole.map((group, groupIndex) => (
+                    <div key={`${group.role || 'role'}-${groupIndex}`} className="role-group">
+                        {activeRoleFilter === 'all' && (
+                            <div className="role-group-header">
+                                <span className="role-group-title">{group.role}</span>
                             </div>
                         )}
+                        {group.rows.map((row, rowIndex) => (
+                            <div key={row._id} className="row-card" style={{ animationDelay: `${(groupIndex + rowIndex) * 0.03}s` }}>
+
+                                <div className="row-header" onClick={() => toggleRow(row._id)} style={{ flexWrap: 'wrap', gap: '10px', cursor: 'pointer' }}>
+                                    <div className="row-inputs-section" style={{ flex: 1, display: 'flex', gap: '10px', minWidth: '300px', alignItems: 'center' }}>
+                                        <div style={{ display: 'flex', gap: '8px', flex: 1, alignItems: 'center', minWidth: 0 }}>
+                                            <span className="name-stack" style={{ fontWeight: 600, fontSize: '15px', lineHeight: 1.4, minWidth: 0 }}>
+                                                {renderNameText(row.name, row.hideName)}
+                                            </span>
+                                        </div>
+                                        {row.role && (
+                                            <div className="row-role-pill">
+                                                Rol: <b>{row.role}</b>
+                                            </div>
+                                        )}
+                                        <div className="row-chevron" style={{ display: 'flex', alignItems: 'center', padding: '0 8px', marginLeft: 'auto' }}>
+                                            <svg
+                                                width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"
+                                                style={{ transform: expandedRows[row._id] === true ? 'rotate(180deg)' : 'rotate(0)', transition: 'transform 0.25s ease' }}
+                                            >
+                                                <polyline points="6 9 12 15 18 9" />
+                                            </svg>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Expanded Tasks */}
+                                {expandedRows[row._id] === true && (
+                                    <div className="row-tasks">
+                                        {row.tasks?.length === 0 ? (
+                                            <div className="no-tasks">Vazifalar yo'q</div>
+                                        ) : (
+                                            <div className="tasks-table">
+                                                <div className="tasks-header" style={{ display: 'flex', gap: '8px', padding: '8px 12px', borderBottom: '1px solid var(--border-color)', color: 'var(--text-muted)', fontSize: '13px', fontWeight: 600, alignItems: 'center' }}>
+                                                    <div style={{ width: '36px', flexShrink: 0 }}>#</div>
+                                                    <div style={{ flex: 2, minWidth: '120px' }}>Vazifa</div>
+                                                    <div style={{ flex: 1, minWidth: '100px' }}>Boshlanish</div>
+                                                    <div style={{ flex: 1, minWidth: '100px' }}>Tugash</div>
+                                                    <div style={{ flex: 1, minWidth: '100px' }}>Istisno kechiktirish</div>
+                                                </div>
+                                                {row.tasks.map((task, tIndex) => (
+                                                    <div key={task._id} className="task-row" onClick={() => openTaskModal(task)} style={{ cursor: 'pointer', display: 'flex', gap: '8px', padding: '8px 12px', alignItems: 'center' }}>
+                                                        <div style={{ width: '36px', flexShrink: 0, fontWeight: 600, color: 'var(--accent-primary)' }}>{tIndex + 1}</div>
+
+                                                        <div style={{ flex: 2, minWidth: '120px' }}>
+                                                            <button
+                                                                className="btn btn-sm btn-primary"
+                                                                style={{ width: '100%', wordBreak: 'break-all', textAlign: 'left', pointerEvents: 'none', border: '1px solid rgba(108, 92, 231, 0.35)', fontWeight: 700 }}
+                                                            >
+                                                                Vazifani ko'rish uchun bosing
+                                                            </button>
+                                                        </div>
+
+                                                        <div style={{ flex: 1, minWidth: '100px' }}>
+                                                            <label className="mobile-label">Boshlanish</label>
+                                                            <div className="input" style={{ display: 'flex', alignItems: 'center' }}>
+                                                                {task.startDate || '-'}
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ flex: 1, minWidth: '100px' }}>
+                                                            <label className="mobile-label">Tugash</label>
+                                                            <div className="input" style={{ display: 'flex', alignItems: 'center' }}>
+                                                                {task.endDate || '-'}
+                                                            </div>
+                                                        </div>
+
+                                                        <div style={{ flex: 1, minWidth: '100px' }}>
+                                                            <label className="mobile-label">Istisno kechiktirish</label>
+                                                            <div className="input" style={{ display: 'flex', alignItems: 'center', color: task.delay ? 'var(--accent-warning)' : 'var(--text-muted)' }}>
+                                                                {task.delay || 'Kechiktirish yo\'q'}
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
                     </div>
                 ))}
             </div>
 
-            {filteredRows.length === 0 && (
+            {totalVisibleRows === 0 && (
                 <div className="empty-state" style={{ padding: '60px 20px' }}>
                     <h3>Ma'lumot topilmadi</h3>
                     <p>Hozircha hech qanday ma'lumot yo'q</p>
