@@ -47,7 +47,7 @@ const PublicTableView = () => {
 
     useEffect(() => {
         loadTable();
-    }, [tableId]);
+    }, [tableId, loadTable]);
 
     const toggleRow = (rowId) => {
         setExpandedRows(prev => ({ ...prev, [rowId]: !prev[rowId] }));
